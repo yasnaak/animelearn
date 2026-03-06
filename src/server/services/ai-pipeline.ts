@@ -526,6 +526,94 @@ ${JSON.stringify(allPanels, null, 2)}`,
 }
 
 // ============================================================
+// PHASE 4B: VIDEO SCENE PROMPTS (for LTX-2.3)
+// ============================================================
+
+export interface VideoScenePrompt {
+  panel_id: string;
+  video_prompt: string;
+  motion_description: string;
+  camera_motion: 'static' | 'dolly_forward' | 'dolly_backward' | 'jib_up' | 'jib_down' | 'focus_shift';
+  suggested_duration: 6 | 8 | 10;
+  key_action: string;
+}
+
+export interface VideoPromptsResult {
+  panels: VideoScenePrompt[];
+}
+
+const VIDEO_PROMPTS_SYSTEM = `You are an anime cinematographer and motion director. Convert static scene descriptions
+into dynamic video generation prompts optimized for AI video models (LTX-2.3).
+
+RULES:
+1. Each prompt must describe MOTION and CHANGE over time, not a static scene
+2. Focus on: what moves, how it moves, the atmosphere, lighting changes
+3. Use cinematic anime language: "camera slowly pushes in", "wind sweeps through hair",
+   "dramatic light shift", "particles float upward"
+4. Keep descriptions vivid but focused — 1-2 sentences of core action
+5. Choose camera_motion based on emotional intent:
+   - static: calm, dialogue-focused
+   - dolly_forward: revelation, intensity building
+   - dolly_backward: establishing shot, pulling back to reveal context
+   - jib_up: hope, triumph, ascending
+   - jib_down: pressure, gravity, descending
+   - focus_shift: attention change, surprise
+6. Duration: 6s for quick cuts/dialogue, 8s for standard scenes, 10s for dramatic/establishing
+
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text.`;
+
+const VIDEO_PROMPTS_SCHEMA = `{
+  "panels": [
+    {
+      "panel_id": "s01_p01",
+      "video_prompt": "string (optimized for video generation)",
+      "motion_description": "string (what physically moves)",
+      "camera_motion": "static | dolly_forward | dolly_backward | jib_up | jib_down | focus_shift",
+      "suggested_duration": 6,
+      "key_action": "string"
+    }
+  ]
+}`;
+
+export async function generateVideoPrompts(
+  script: EpisodeScript,
+  plan: SeriesPlan,
+  style: string,
+) {
+  const allPanels = script.scenes.flatMap((scene) =>
+    scene.panels.map((panel) => ({
+      ...panel,
+      scene_mood: scene.mood,
+      scene_type: scene.scene_type,
+    })),
+  );
+
+  const userPrompt = 'Convert these anime script panels into optimized VIDEO generation prompts.\n' +
+    'These prompts will be used to generate 6-10 second animated clips with LTX-2.3.\n\n' +
+    'Visual style: ' + style + '\n' +
+    'Follow this JSON schema:\n' + VIDEO_PROMPTS_SCHEMA + '\n\n' +
+    'CHARACTERS (for reference):\n' +
+    JSON.stringify(
+      plan.characters.map((c) => ({
+        id: c.id,
+        visual_description: c.visual_description,
+      })),
+      null,
+      2,
+    ) + '\n\n' +
+    'PANELS TO CONVERT:\n' +
+    JSON.stringify(allPanels, null, 2);
+
+  return callClaude<VideoPromptsResult>({
+    model: 'sonnet',
+    systemPrompt: VIDEO_PROMPTS_SYSTEM,
+    userPrompt,
+    maxTokens: 16384,
+    temperature: 0.5,
+  });
+}
+
+// ============================================================
 // SCRIPT VALIDATOR
 // ============================================================
 

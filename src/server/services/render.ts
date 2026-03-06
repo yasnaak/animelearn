@@ -13,6 +13,7 @@ interface PanelRecord {
   backgroundImageUrl: string | null;
   characterLayerUrl: string | null;
   effectLayerUrl: string | null;
+  videoUrl: string | null;
   metadata: unknown;
 }
 
@@ -107,6 +108,7 @@ export function assembleEpisodeProps(params: {
           panelRecord?.backgroundImageUrl ?? '/placeholder-bg.png',
         characterLayerUrl: panelRecord?.characterLayerUrl ?? null,
         effectLayerUrl: panelRecord?.effectLayerUrl ?? null,
+        videoUrl: panelRecord?.videoUrl ?? null,
         durationFrames,
         parallax: {
           type: parallaxType,

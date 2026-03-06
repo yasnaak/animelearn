@@ -1,8 +1,11 @@
 export interface PanelData {
   panelId: string;
+  // Static image layers (original approach)
   backgroundImageUrl: string;
   characterLayerUrl: string | null;
   effectLayerUrl: string | null;
+  // Video clip (LTX-2.3 approach — if present, takes priority over static layers)
+  videoUrl: string | null;
   durationFrames: number;
   parallax: {
     type: 'slow_pan_left' | 'slow_pan_right' | 'zoom_in' | 'zoom_out' | 'shake' | 'float' | 'dramatic_zoom' | 'static';

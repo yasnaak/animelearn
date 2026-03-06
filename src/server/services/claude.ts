@@ -1,8 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+let _client: Anthropic | null = null;
+
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+  }
+  return _client;
+}
 
 interface ClaudeOptions {
   model?: 'sonnet' | 'opus';
@@ -47,7 +54,7 @@ export async function callClaude<T>(
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      const response = await client.messages.create({
+      const response = await getClient().messages.create({
         model: modelId,
         max_tokens: maxTokens,
         temperature,

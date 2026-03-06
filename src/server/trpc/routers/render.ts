@@ -63,6 +63,7 @@ export const renderRouter = router({
           backgroundImageUrl: pr.backgroundImageUrl,
           characterLayerUrl: pr.characterLayerUrl,
           effectLayerUrl: pr.effectLayerUrl,
+          videoUrl: pr.videoUrl,
           metadata: pr.metadata,
         })),
         audioTrackRecords: audioTrackRecords.map((at) => ({

@@ -201,6 +201,7 @@ export const panels = pgTable(
     backgroundImageUrl: text('background_image_url'),
     characterLayerUrl: text('character_layer_url'),
     effectLayerUrl: text('effect_layer_url'),
+    videoUrl: text('video_url'),
     compositeImageUrl: text('composite_image_url'),
     prompt: jsonb('prompt'),
     metadata: jsonb('metadata'),

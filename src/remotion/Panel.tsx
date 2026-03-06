@@ -1,4 +1,4 @@
-import { AbsoluteFill, Audio, Sequence } from 'remotion';
+import { AbsoluteFill, Audio, Sequence, Video } from 'remotion';
 import { ParallaxLayer } from './ParallaxLayer';
 import { DialogueBubble } from './DialogueBubble';
 import { Subtitles } from './Subtitles';
@@ -34,7 +34,7 @@ export const Panel: React.FC<PanelProps> = ({ panel }) => {
   });
 
   // Narration timing (after dialogue)
-  let narrationStart = dialogueOffset + 10;
+  const narrationStart = dialogueOffset + 10;
   if (panel.narration) {
     const narrationDuration = Math.ceil(
       (panel.narration.durationMs / 1000) * 30,
@@ -46,40 +46,60 @@ export const Panel: React.FC<PanelProps> = ({ panel }) => {
     });
   }
 
+  // Determine if this panel uses a video clip or static layers
+  const hasVideo = !!panel.videoUrl;
+
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {/* Layer 1: Background */}
-      <ParallaxLayer
-        imageUrl={panel.backgroundImageUrl}
-        depth={1}
-        movement={panel.parallax.type}
-        durationFrames={durationFrames}
-        intensity={panel.parallax.intensity}
-      />
+      {hasVideo ? (
+        /* ── Video clip mode (LTX-2.3) ── */
+        <AbsoluteFill>
+          <Video
+            src={panel.videoUrl!}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        </AbsoluteFill>
+      ) : (
+        /* ── Static image layers mode (fal.ai + parallax) ── */
+        <>
+          {/* Layer 1: Background */}
+          <ParallaxLayer
+            imageUrl={panel.backgroundImageUrl}
+            depth={1}
+            movement={panel.parallax.type}
+            durationFrames={durationFrames}
+            intensity={panel.parallax.intensity}
+          />
 
-      {/* Layer 2: Characters */}
-      {panel.characterLayerUrl ? (
-        <ParallaxLayer
-          imageUrl={panel.characterLayerUrl}
-          depth={2}
-          movement={panel.parallax.type}
-          durationFrames={durationFrames}
-          intensity={panel.parallax.intensity}
-        />
-      ) : null}
+          {/* Layer 2: Characters */}
+          {panel.characterLayerUrl ? (
+            <ParallaxLayer
+              imageUrl={panel.characterLayerUrl}
+              depth={2}
+              movement={panel.parallax.type}
+              durationFrames={durationFrames}
+              intensity={panel.parallax.intensity}
+            />
+          ) : null}
 
-      {/* Layer 3: Effects */}
-      {panel.effectLayerUrl ? (
-        <ParallaxLayer
-          imageUrl={panel.effectLayerUrl}
-          depth={3}
-          movement={panel.parallax.type}
-          durationFrames={durationFrames}
-          intensity={panel.parallax.intensity}
-        />
-      ) : null}
+          {/* Layer 3: Effects */}
+          {panel.effectLayerUrl ? (
+            <ParallaxLayer
+              imageUrl={panel.effectLayerUrl}
+              depth={3}
+              movement={panel.parallax.type}
+              durationFrames={durationFrames}
+              intensity={panel.parallax.intensity}
+            />
+          ) : null}
+        </>
+      )}
 
-      {/* Dialogue bubbles */}
+      {/* Dialogue bubbles (overlaid on both video and static modes) */}
       {dialogueSequences.map((line, i) => (
         <DialogueBubble
           key={`${panel.panelId}-dialogue-${i}`}

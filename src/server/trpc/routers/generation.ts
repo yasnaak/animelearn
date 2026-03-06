@@ -1,5 +1,12 @@
 import { router, protectedProcedure } from '../init';
-import { projects, episodes, characters } from '@/server/db/schema';
+import {
+  projects,
+  episodes,
+  characters,
+  panels,
+  audioTracks,
+  generationJobs,
+} from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import {
@@ -7,10 +14,31 @@ import {
   planSeries,
   generateScript,
   validateScript,
+  generateVisualPrompts,
+  generateAudioDirection,
   type ContentAnalysis,
   type SeriesPlan,
   type EpisodeScript,
+  type VisualPromptsResult,
+  type AudioDirection,
 } from '@/server/services/ai-pipeline';
+import {
+  generateCharacterSheet,
+  generatePanelLayers,
+  removeBackground,
+  generateImage,
+  getStyleModifiers,
+} from '@/server/services/fal';
+import {
+  generateSpeech,
+  generateSoundEffect,
+  generateMusic,
+  getVoiceForRole,
+} from '@/server/services/elevenlabs';
+import {
+  generateSceneClip,
+  mapParallaxToCamera,
+} from '@/server/services/replicate';
 
 export const generationRouter = router({
   // Phase 1+2: Analyze content and plan series
@@ -216,5 +244,433 @@ export const generationRouter = router({
         .from(episodes)
         .where(eq(episodes.projectId, input.projectId))
         .orderBy(episodes.episodeNumber);
+    }),
+
+  // Get generation progress for an episode
+  getProgress: protectedProcedure
+    .input(z.object({ episodeId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const jobs = await ctx.db
+        .select()
+        .from(generationJobs)
+        .where(eq(generationJobs.episodeId, input.episodeId))
+        .limit(1);
+
+      return jobs[0] ?? null;
+    }),
+
+  // Full auto-generation: one button → complete episode
+  generateEpisode: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        episodeNumber: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, input.projectId))
+        .limit(1);
+
+      const p = project[0];
+      if (!p || p.userId !== ctx.user.id) throw new Error('Project not found');
+      if (!p.contentAnalysis || !p.seriesPlan) {
+        throw new Error('Project must be analyzed first');
+      }
+
+      const analysis = p.contentAnalysis as unknown as ContentAnalysis;
+      const plan = p.seriesPlan as unknown as SeriesPlan;
+
+      const episodeRows = await ctx.db
+        .select()
+        .from(episodes)
+        .where(eq(episodes.projectId, input.projectId));
+
+      const episode = episodeRows.find(
+        (e) => e.episodeNumber === input.episodeNumber,
+      );
+      if (!episode) throw new Error('Episode not found');
+
+      // Create generation job for progress tracking
+      const [job] = await ctx.db
+        .insert(generationJobs)
+        .values({
+          episodeId: episode.id,
+          currentStep: 'script',
+          progress: 0,
+          stepsCompleted: [],
+        })
+        .returning();
+
+      const jobId = job.id;
+
+      const updateProgress = async (
+        step: string,
+        progress: number,
+        completedSteps: string[],
+      ) => {
+        await ctx.db
+          .update(generationJobs)
+          .set({
+            currentStep: step,
+            progress,
+            stepsCompleted: completedSteps,
+          })
+          .where(eq(generationJobs.id, jobId));
+      };
+
+      await ctx.db
+        .update(episodes)
+        .set({
+          status: 'script',
+          generationStartedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(episodes.id, episode.id));
+
+      const completed: string[] = [];
+
+      try {
+        // ── Step 1: Generate Script ──
+        await updateProgress('script', 5, completed);
+
+        const scriptResult = await generateScript(
+          analysis,
+          plan,
+          input.episodeNumber,
+          p.language,
+        );
+        const validation = await validateScript(
+          scriptResult.data,
+          plan,
+          analysis,
+          input.episodeNumber,
+        );
+
+        await ctx.db
+          .update(episodes)
+          .set({
+            script: scriptResult.data as unknown as Record<string, unknown>,
+            status: 'visuals',
+            updatedAt: new Date(),
+          })
+          .where(eq(episodes.id, episode.id));
+
+        completed.push('script');
+        await updateProgress('characters', 15, completed);
+
+        const script = scriptResult.data as EpisodeScript;
+
+        // ── Step 2: Character Sheets ──
+        const chars = await ctx.db
+          .select()
+          .from(characters)
+          .where(eq(characters.projectId, input.projectId));
+
+        for (const char of chars) {
+          if (!char.characterSheetUrl) {
+            const sheet = await generateCharacterSheet(
+              char.visualDescription,
+              p.style,
+            );
+            await ctx.db
+              .update(characters)
+              .set({ characterSheetUrl: sheet.url })
+              .where(eq(characters.id, char.id));
+          }
+        }
+
+        completed.push('characters');
+        await updateProgress('visual_prompts', 25, completed);
+
+        // ── Step 3: Visual Prompts ──
+        const vpResult = await generateVisualPrompts(script, plan, p.style);
+
+        await ctx.db
+          .update(episodes)
+          .set({
+            visualPrompts: vpResult.data as unknown as Record<string, unknown>,
+            updatedAt: new Date(),
+          })
+          .where(eq(episodes.id, episode.id));
+
+        completed.push('visual_prompts');
+        await updateProgress('video_clips', 35, completed);
+
+        const visualPrompts = vpResult.data as VisualPromptsResult;
+
+        // ── Step 4: Video Clips (fal.ai still + LTX-2.3 animate) ──
+        const styleMod = getStyleModifiers(p.style);
+
+        for (let i = 0; i < visualPrompts.panels.length; i++) {
+          const vp = visualPrompts.panels[i];
+          const panelProgress = 35 + Math.round((i / visualPrompts.panels.length) * 25);
+          await updateProgress('video_clips', panelProgress, completed);
+
+          let parallaxBgMovement = 'static';
+          let panelOrder = 0;
+          let sceneId = 's01';
+
+          for (const scene of script.scenes) {
+            const idx = scene.panels.findIndex(
+              (sp) => sp.panel_id === vp.panel_id,
+            );
+            if (idx >= 0) {
+              parallaxBgMovement =
+                scene.panels[idx].parallax?.background_movement ?? 'static';
+              sceneId = scene.scene_id;
+              panelOrder = script.scenes
+                .flatMap((s) => s.panels)
+                .findIndex((sp) => sp.panel_id === vp.panel_id);
+              break;
+            }
+          }
+
+          // Generate reference still image
+          const bgPrompt = styleMod.prompt + ', ' + vp.layers.background.prompt;
+          const referenceImage = await generateImage({
+            prompt: bgPrompt,
+            negativePrompt: styleMod.negative,
+            width: 1920,
+            height: 1080,
+          });
+
+          // Animate with LTX-2.3
+          const cameraMotion = mapParallaxToCamera(parallaxBgMovement);
+          const videoPrompt =
+            vp.layers.background.prompt +
+            ', ' +
+            vp.composition_notes +
+            ', anime scene, cinematic';
+
+          const video = await generateSceneClip({
+            prompt: videoPrompt,
+            referenceImageUrl: referenceImage.url,
+            cameraMotion,
+            duration: 6,
+            usePro: false,
+          });
+
+          await ctx.db.insert(panels).values({
+            episodeId: episode.id,
+            sceneId,
+            panelId: vp.panel_id,
+            panelOrder: panelOrder >= 0 ? panelOrder : 0,
+            backgroundImageUrl: referenceImage.url,
+            videoUrl: video.videoUrl,
+            prompt: vp as unknown as Record<string, unknown>,
+            metadata: {
+              cameraMotion,
+              durationSeconds: video.durationSeconds,
+            },
+          });
+        }
+
+        completed.push('video_clips');
+        await updateProgress('audio_direction', 62, completed);
+
+        // ── Step 5: Audio Direction ──
+        const adResult = await generateAudioDirection(
+          script,
+          plan,
+          episode.episodeNumber,
+          p.language,
+        );
+
+        await ctx.db
+          .update(episodes)
+          .set({
+            audioDirection: adResult.data as unknown as Record<string, unknown>,
+            status: 'audio',
+            updatedAt: new Date(),
+          })
+          .where(eq(episodes.id, episode.id));
+
+        completed.push('audio_direction');
+        await updateProgress('audio', 68, completed);
+
+        const direction = adResult.data as AudioDirection;
+
+        // ── Step 6: Generate Audio ──
+        const updatedChars = await ctx.db
+          .select()
+          .from(characters)
+          .where(eq(characters.projectId, input.projectId));
+
+        const charVoiceMap = new Map<string, string>();
+        for (const char of updatedChars) {
+          const personality = char.personality as Record<string, unknown> | null;
+          const charId = (personality?.id as string) ?? char.id;
+          const voiceId = char.voiceId ?? getVoiceForRole(char.role);
+          charVoiceMap.set(charId, voiceId);
+        }
+
+        // Dialogue + Narration + SFX
+        for (let i = 0; i < direction.audio_timeline.length; i++) {
+          const entry = direction.audio_timeline[i];
+          const audioProgress =
+            68 + Math.round((i / direction.audio_timeline.length) * 18);
+          await updateProgress('audio', audioProgress, completed);
+
+          for (const line of entry.dialogue) {
+            if (!line.text) continue;
+            const voiceId = charVoiceMap.get(line.character_id);
+            if (!voiceId) continue;
+
+            const voiceSettings =
+              direction.voice_assignments[line.character_id]?.base_settings;
+
+            const tts = await generateSpeech({
+              text: line.text,
+              voiceId,
+              stability:
+                line.emotion_override?.stability ??
+                voiceSettings?.stability ??
+                0.5,
+              similarityBoost: voiceSettings?.similarity_boost ?? 0.75,
+              style: voiceSettings?.style ?? 0.3,
+              speed: line.emotion_override?.speed ?? 1.0,
+            });
+
+            const audioUrl =
+              'data:audio/mp3;base64,' + tts.audioBuffer.toString('base64');
+
+            await ctx.db.insert(audioTracks).values({
+              episodeId: episode.id,
+              trackType: 'dialogue',
+              characterId: updatedChars.find((c) => {
+                const pers = c.personality as Record<string, unknown> | null;
+                return (pers?.id as string) === line.character_id;
+              })?.id,
+              audioUrl,
+              durationMs: tts.durationMs,
+              panelId: entry.panel_id,
+              metadata: {
+                text: line.text,
+                characterId: line.character_id,
+                emotion: line.emotion_override,
+              },
+            });
+          }
+
+          if (entry.narration?.text) {
+            const narratorVoice = getVoiceForRole('narrator');
+            const tts = await generateSpeech({
+              text: entry.narration.text,
+              voiceId: narratorVoice,
+              stability: 0.6,
+              similarityBoost: 0.8,
+              style: 0.2,
+              speed: entry.narration.speed ?? 1.0,
+            });
+            const audioUrl =
+              'data:audio/mp3;base64,' + tts.audioBuffer.toString('base64');
+
+            await ctx.db.insert(audioTracks).values({
+              episodeId: episode.id,
+              trackType: 'narration',
+              audioUrl,
+              durationMs: tts.durationMs,
+              panelId: entry.panel_id,
+              metadata: { text: entry.narration.text },
+            });
+          }
+
+          if (entry.sfx?.description) {
+            try {
+              const sfx = await generateSoundEffect(entry.sfx.description, 3);
+              const audioUrl =
+                'data:audio/mp3;base64,' + sfx.audioBuffer.toString('base64');
+
+              await ctx.db.insert(audioTracks).values({
+                episodeId: episode.id,
+                trackType: 'sfx',
+                audioUrl,
+                durationMs: sfx.durationMs,
+                panelId: entry.panel_id,
+                metadata: {
+                  description: entry.sfx.description,
+                  timing: entry.sfx.timing,
+                  volume: entry.sfx.volume,
+                },
+              });
+            } catch {
+              // SFX is non-critical
+            }
+          }
+        }
+
+        // Music tracks
+        await updateProgress('music', 88, completed);
+
+        for (const track of direction.music_tracks) {
+          try {
+            const music = await generateMusic(
+              track.prompt,
+              track.duration_seconds,
+            );
+
+            await ctx.db.insert(audioTracks).values({
+              episodeId: episode.id,
+              trackType: 'music',
+              audioUrl: music.audioUrl,
+              durationMs: music.durationMs,
+              metadata: {
+                trackId: track.track_id,
+                prompt: track.prompt,
+                mood: track.mood,
+                loop: track.loop,
+              },
+            });
+          } catch {
+            // Music is non-critical
+          }
+        }
+
+        completed.push('audio');
+        await updateProgress('finishing', 95, completed);
+
+        // ── Step 7: Mark ready ──
+        await ctx.db
+          .update(episodes)
+          .set({
+            status: 'ready',
+            generationCompletedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(episodes.id, episode.id));
+
+        completed.push('complete');
+        await updateProgress('complete', 100, completed);
+        await ctx.db
+          .update(generationJobs)
+          .set({ completedAt: new Date() })
+          .where(eq(generationJobs.id, jobId));
+
+        return { success: true, episodeId: episode.id };
+      } catch (error) {
+        await ctx.db
+          .update(episodes)
+          .set({
+            status: 'failed',
+            generationError:
+              error instanceof Error ? error.message : 'Generation failed',
+            updatedAt: new Date(),
+          })
+          .where(eq(episodes.id, episode.id));
+
+        await ctx.db
+          .update(generationJobs)
+          .set({
+            error:
+              error instanceof Error ? error.message : 'Generation failed',
+            completedAt: new Date(),
+          })
+          .where(eq(generationJobs.id, jobId));
+
+        throw error;
+      }
     }),
 });

@@ -1,8 +1,15 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 
-const client = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY,
-});
+let _client: ElevenLabsClient | null = null;
+
+function getClient(): ElevenLabsClient {
+  if (!_client) {
+    _client = new ElevenLabsClient({
+      apiKey: process.env.ELEVENLABS_API_KEY,
+    });
+  }
+  return _client;
+}
 
 // ============================================================
 // TEXT TO SPEECH
@@ -32,7 +39,7 @@ export async function generateSpeech(options: TTSOptions): Promise<TTSResult> {
     speed = 1.0,
   } = options;
 
-  const audioStream = await client.textToSpeech.convert(voiceId, {
+  const audioStream = await getClient().textToSpeech.convert(voiceId, {
     text,
     modelId: 'eleven_multilingual_v2',
     voiceSettings: {
@@ -73,7 +80,7 @@ export async function generateSoundEffect(
   description: string,
   durationSeconds: number = 3,
 ): Promise<SFXResult> {
-  const result = await client.textToSoundEffects.convert({
+  const result = await getClient().textToSoundEffects.convert({
     text: description,
     durationSeconds,
   });
@@ -104,7 +111,7 @@ export async function generateMusic(
   prompt: string,
   durationSeconds: number = 30,
 ): Promise<MusicResult> {
-  const stream = await client.music.compose({
+  const stream = await getClient().music.compose({
     prompt,
     musicLengthMs: durationSeconds * 1000,
     outputFormat: 'mp3_44100_128',
@@ -133,7 +140,7 @@ export async function generateMusic(
 // ============================================================
 
 export async function listVoices() {
-  const voices = await client.voices.getAll();
+  const voices = await getClient().voices.getAll();
   return (voices.voices ?? []).map((v) => ({
     id: v.voiceId,
     name: v.name,

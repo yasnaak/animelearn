@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AnimeLearn
+
+Transform educational content into motion comic anime episodes using AI.
+
+Upload a PDF or YouTube URL, and AnimeLearn generates a fully animated anime episode with voice acting, music, sound effects, and cinematic video clips.
+
+## Stack
+
+- **Framework**: Next.js 16 + React 19 + TypeScript + Tailwind CSS
+- **Backend**: tRPC v11 + Drizzle ORM + PostgreSQL (Railway)
+- **Auth**: Supabase (Google OAuth)
+- **AI Script**: Claude API (Anthropic) — 5-phase pipeline (analyze, plan, script, visual prompts, audio direction)
+- **Images**: fal.ai — character sheets, backgrounds, effects (4 art styles)
+- **Video**: LTX-2.3 via Replicate — image-to-video animation for each panel
+- **Audio**: ElevenLabs — TTS dialogue, generative music, sound effects
+- **Composition**: Remotion — parallax layers, transitions, subtitle sync, final MP4 render
+- **Deploy**: Vercel (animelearn.vercel.app)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+cp .env.example .env.local
+# Fill in all API keys (see below)
+
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+DATABASE_URL=            # PostgreSQL connection string (Railway)
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+ANTHROPIC_API_KEY=       # Claude API
+FAL_KEY=                 # fal.ai image generation
+ELEVENLABS_API_KEY=      # TTS, music, SFX
+REPLICATE_API_TOKEN=     # LTX-2.3 video generation
+AWS_ACCESS_KEY_ID=       # S3 storage
+AWS_SECRET_ACCESS_KEY=
+AWS_S3_BUCKET=
+```
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+  app/                   # Next.js App Router pages
+    dashboard/           # Protected dashboard routes
+    api/                 # API routes (tRPC, upload)
+  components/ui/         # shadcn/ui components
+  server/
+    db/                  # Drizzle schema + migrations
+    trpc/                # tRPC routers (project, generation, visuals, audio, video, render)
+    services/            # AI pipeline, fal, elevenlabs, replicate, render
+  remotion/              # Remotion video composition components
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## AI Pipeline
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Analyze** (Sonnet) — Extract key concepts, characters, narrative arcs from source material
+2. **Plan** (Sonnet) — Structure multi-episode series with learning objectives
+3. **Script** (Opus) — Full screenplay with dialogue, stage directions, panel breakdowns
+4. **Visual Prompts** (Sonnet) — Per-panel image prompts + video motion prompts for LTX-2.3
+5. **Audio Direction** (Sonnet) — Voice assignments, music cues, SFX triggers
 
-## Deploy on Vercel
+## Art Styles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Clean Modern — sharp lines, vibrant colors
+- Soft Pastel — watercolor tones, gentle gradients
+- Dark Dramatic — high contrast, cinematic shadows
+- Retro Classic — 90s anime aesthetic
