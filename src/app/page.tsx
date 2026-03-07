@@ -40,7 +40,36 @@ function useReveal() {
       { threshold: 0.08, rootMargin: '0px 0px -40px 0px' },
     );
     items.forEach((c) => io.observe(c));
-    return () => io.disconnect();
+
+    // When navigating via anchor links, instantly reveal elements in the target section
+    const revealAnchorTarget = () => {
+      const hash = window.location.hash;
+      if (!hash) return;
+      const target = el.querySelector(hash);
+      if (target) {
+        target.querySelectorAll('.al-reveal').forEach((child) => {
+          child.classList.add('al-visible');
+          io.unobserve(child);
+        });
+        // Also reveal the section-level .al-reveal
+        if (target.querySelector('.al-reveal') === null) {
+          const parent = target.closest('section');
+          parent?.querySelectorAll('.al-reveal').forEach((child) => {
+            child.classList.add('al-visible');
+            io.unobserve(child);
+          });
+        }
+      }
+    };
+
+    // Handle initial load with hash
+    revealAnchorTarget();
+    window.addEventListener('hashchange', revealAnchorTarget);
+
+    return () => {
+      io.disconnect();
+      window.removeEventListener('hashchange', revealAnchorTarget);
+    };
   }, []);
   return ref;
 }
@@ -154,7 +183,7 @@ export default function LandingPage() {
           {[
             { value: '5 min', label: 'From notes to anime' },
             { value: '4', label: 'Art styles to choose from' },
-            { value: '30+', label: 'Languages supported' },
+            { value: '3', label: 'Languages supported' },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <div className="text-2xl font-bold text-white sm:text-3xl">{s.value}</div>
@@ -416,8 +445,8 @@ export default function LandingPage() {
             },
             {
               icon: Globe,
-              title: '30+ Languages',
-              desc: 'Study in your native language or generate episodes in a language you are learning. Natural pronunciation included.',
+              title: 'Multiple Languages',
+              desc: 'Generate episodes in English, Spanish, or Japanese. More languages coming soon. Natural pronunciation included.',
             },
             {
               icon: Zap,

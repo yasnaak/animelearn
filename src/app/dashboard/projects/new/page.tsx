@@ -84,9 +84,17 @@ export default function NewProjectPage() {
       return;
     }
 
-    if (sourceType === 'youtube' && !youtubeUrl.trim()) {
-      toast.error('Please enter a YouTube URL');
-      return;
+    if (sourceType === 'youtube') {
+      const url = youtubeUrl.trim();
+      if (!url) {
+        toast.error('Please enter a YouTube URL');
+        return;
+      }
+      const ytRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]+/;
+      if (!ytRegex.test(url)) {
+        toast.error('Please enter a valid YouTube URL (e.g. https://youtube.com/watch?v=...)');
+        return;
+      }
     }
 
     try {
@@ -315,9 +323,8 @@ export default function NewProjectPage() {
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  We'll extract the transcript from the video. Subtitles must be
-                  available.
+                <p className="text-xs text-amber-500">
+                  YouTube transcript extraction is coming soon. For now, please use PDF upload.
                 </p>
               </TabsContent>
             </Tabs>

@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use, useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,17 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   ArrowLeft,
   FileText,
@@ -235,7 +246,6 @@ export default function ProjectPage({
   });
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this project?')) return;
     const result = await deleteProject.mutateAsync({ id: projectId });
     if (result.success) {
       toast.success('Project deleted');
@@ -297,14 +307,38 @@ export default function ProjectPage({
             {project.style.replace('_', ' ')} &middot; {project.language}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleDelete}
-          disabled={deleteProject.isPending}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={deleteProject.isPending}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this project?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the project, all episodes, and generated content. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteProject.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</>
+                ) : (
+                  'Delete Project'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* Step 1: Content uploaded — show analyze button */}
@@ -355,13 +389,16 @@ export default function ProjectPage({
       ) : !project.rawContent ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-semibold">No content yet</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <AlertCircle className="h-12 w-12 text-amber-500" />
+            <h3 className="mt-4 text-lg font-semibold">No content extracted</h3>
+            <p className="mt-1 max-w-sm text-center text-sm text-muted-foreground">
               {project.sourceType === 'pdf'
-                ? 'PDF text extraction pending'
-                : 'YouTube transcript extraction pending'}
+                ? 'The PDF could not be processed. Please try uploading it again.'
+                : 'YouTube transcript extraction is not available yet. Please upload a PDF instead.'}
             </p>
+            <Button asChild variant="outline" className="mt-4">
+              <Link href="/dashboard/projects/new">Create New Project</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : null}
