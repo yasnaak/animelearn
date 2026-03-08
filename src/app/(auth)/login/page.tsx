@@ -94,7 +94,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
