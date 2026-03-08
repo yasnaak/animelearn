@@ -497,12 +497,15 @@ export default function ProjectPage({
                         {/* Watch button for ready episodes */}
                         {isReady && (
                           <Button
+                            asChild
                             variant="outline"
                             className="w-full"
                             size="lg"
                           >
-                            <Play className="mr-2 h-4 w-4" />
-                            Watch Episode
+                            <Link href={`/watch/${ep.id}`}>
+                              <Play className="mr-2 h-4 w-4" />
+                              Watch Episode
+                            </Link>
                           </Button>
                         )}
 
