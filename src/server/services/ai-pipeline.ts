@@ -117,6 +117,34 @@ export interface EpisodeScript {
   };
 }
 
+export interface QuizData {
+  questions: Array<{
+    id: string;
+    type: 'multiple_choice' | 'true_false';
+    question: string;
+    options: string[];
+    correct_answer: number;
+    explanation: string;
+    difficulty: 'easy' | 'medium' | 'hard';
+    concept_tested: string;
+  }>;
+  passing_score: number;
+  total_points: number;
+}
+
+export interface StudyNotes {
+  title: string;
+  summary: string;
+  key_concepts: Array<{
+    name: string;
+    definition: string;
+    importance: string;
+  }>;
+  key_takeaways: string[];
+  review_questions: string[];
+  connections_to_next: string | null;
+}
+
 // ============================================================
 // PHASE 1: CONTENT ANALYSIS
 // ============================================================
@@ -797,6 +825,152 @@ ${JSON.stringify(plan.characters, null, 2)}
 SCRIPT:
 ${JSON.stringify(script, null, 2)}`,
     maxTokens: 16384,
+    temperature: 0.5,
+  });
+}
+
+// ============================================================
+// PHASE 6: QUIZ GENERATION
+// ============================================================
+
+const QUIZ_SYSTEM_PROMPT = `You are an expert educational assessment designer. Generate quiz questions that test genuine comprehension — not just memorization.
+
+RULES:
+- Create a mix of multiple_choice and true_false questions
+- Multiple choice: exactly 4 options, one correct
+- Use common misconceptions as plausible wrong answers
+- Explanations should teach, not just state the answer
+- Questions should progress from easy to hard
+- Test recall, comprehension, AND application
+- Write in the same language as the episode content
+
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
+
+const QUIZ_SCHEMA = `{
+  "questions": [
+    {
+      "id": "q_001",
+      "type": "multiple_choice | true_false",
+      "question": "string",
+      "options": ["string", "string", "string", "string"],
+      "correct_answer": 0,
+      "explanation": "string (2-3 sentences explaining why)",
+      "difficulty": "easy | medium | hard",
+      "concept_tested": "string (concept name)"
+    }
+  ],
+  "passing_score": 60,
+  "total_points": number
+}`;
+
+export async function generateQuiz(
+  script: EpisodeScript,
+  analysis: ContentAnalysis,
+  episodeNumber: number,
+  language: string,
+) {
+  const episodeConcepts = analysis.concepts.map((c) => ({
+    name: c.name,
+    key_facts: c.key_facts,
+    misconceptions: c.common_misconceptions,
+  }));
+
+  return callClaude<QuizData>({
+    model: 'sonnet',
+    systemPrompt: QUIZ_SYSTEM_PROMPT,
+    userPrompt: `Generate 5-7 quiz questions for Episode ${episodeNumber} based on the following.
+
+Language: ${language}
+
+EPISODE SUMMARY POINTS:
+${JSON.stringify(script.end_card.summary_points)}
+
+CONCEPTS COVERED:
+${JSON.stringify(episodeConcepts, null, 2)}
+
+KEY EDUCATIONAL NOTES FROM PANELS:
+${script.scenes
+  .flatMap((s) => s.panels.map((p) => p.educational_note))
+  .filter(Boolean)
+  .join('\n- ')}
+
+Follow this schema:
+${QUIZ_SCHEMA}`,
+    maxTokens: 4096,
+    temperature: 0.5,
+  });
+}
+
+// ============================================================
+// PHASE 7: STUDY NOTES GENERATION
+// ============================================================
+
+const STUDY_NOTES_SYSTEM_PROMPT = `You are an expert study guide creator. Generate concise, well-structured study notes that help students review and retain what they learned.
+
+RULES:
+- Write clear, student-friendly definitions
+- Highlight why each concept matters
+- Include self-test review questions (open-ended, no answers)
+- If there's a next episode, connect concepts forward
+- Write in the same language as the episode content
+
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
+
+const STUDY_NOTES_SCHEMA = `{
+  "title": "string (episode title)",
+  "summary": "string (2-3 paragraph summary of the episode)",
+  "key_concepts": [
+    {
+      "name": "string",
+      "definition": "string (clear, concise definition)",
+      "importance": "string (why this matters)"
+    }
+  ],
+  "key_takeaways": ["string (actionable insight)"],
+  "review_questions": ["string (open-ended question for self-study)"],
+  "connections_to_next": "string | null"
+}`;
+
+export async function generateStudyNotes(
+  script: EpisodeScript,
+  analysis: ContentAnalysis,
+  episodeNumber: number,
+  teaserNext: string | null,
+  language: string,
+) {
+  return callClaude<StudyNotes>({
+    model: 'sonnet',
+    systemPrompt: STUDY_NOTES_SYSTEM_PROMPT,
+    userPrompt: `Generate study notes for Episode ${episodeNumber}: "${script.episode.title}"
+
+Language: ${language}
+
+EPISODE SUMMARY POINTS:
+${JSON.stringify(script.end_card.summary_points)}
+
+CONCEPTS COVERED:
+${JSON.stringify(
+  analysis.concepts.map((c) => ({
+    name: c.name,
+    description: c.description,
+    key_facts: c.key_facts,
+    analogy: c.real_world_analogy,
+  })),
+  null,
+  2,
+)}
+
+EDUCATIONAL NOTES:
+${script.scenes
+  .flatMap((s) => s.panels.map((p) => p.educational_note))
+  .filter(Boolean)
+  .join('\n- ')}
+
+TEASER FOR NEXT EPISODE: ${teaserNext ?? 'None (final episode)'}
+
+Follow this schema:
+${STUDY_NOTES_SCHEMA}`,
+    maxTokens: 4096,
     temperature: 0.5,
   });
 }

@@ -21,6 +21,8 @@ import {
   type EpisodeScript,
   type VisualPromptsResult,
   type AudioDirection,
+  generateQuiz,
+  generateStudyNotes,
 } from '@/server/services/ai-pipeline';
 import {
   generateCharacterSheet,
@@ -630,9 +632,41 @@ export const generationRouter = router({
         }
 
         completed.push('audio');
+
+        // ── Step 7: Quiz + Study Notes (non-critical) ──
+        await updateProgress('quiz', 90, completed);
+
+        try {
+          const contentAnalysis = p.contentAnalysis as unknown as ContentAnalysis;
+
+          const [quizResult, notesResult] = await Promise.all([
+            generateQuiz(script, contentAnalysis, input.episodeNumber, p.language),
+            generateStudyNotes(
+              script,
+              contentAnalysis,
+              input.episodeNumber,
+              script.end_card.teaser_next_episode,
+              p.language,
+            ),
+          ]);
+
+          await ctx.db
+            .update(episodes)
+            .set({
+              quizData: quizResult.data as unknown as Record<string, unknown>,
+              studyNotes: notesResult.data as unknown as Record<string, unknown>,
+              updatedAt: new Date(),
+            })
+            .where(eq(episodes.id, episode.id));
+        } catch {
+          // Quiz/notes generation is non-critical
+          console.warn('[Generation] Quiz/study notes generation failed, continuing...');
+        }
+
+        completed.push('quiz');
         await updateProgress('finishing', 95, completed);
 
-        // ── Step 7: Mark ready ──
+        // ── Step 8: Mark ready ──
         await ctx.db
           .update(episodes)
           .set({

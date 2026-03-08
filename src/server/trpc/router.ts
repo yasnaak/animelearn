@@ -5,6 +5,7 @@ import { visualsRouter } from './routers/visuals';
 import { audioRouter } from './routers/audio';
 import { renderRouter } from './routers/render';
 import { videoRouter } from './routers/video';
+import { learningRouter } from './routers/learning';
 
 export const appRouter = router({
   project: projectRouter,
@@ -13,6 +14,7 @@ export const appRouter = router({
   audio: audioRouter,
   render: renderRouter,
   video: videoRouter,
+  learning: learningRouter,
 });
 
 export type AppRouter = typeof appRouter;

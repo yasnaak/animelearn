@@ -74,6 +74,10 @@ const STEP_LABELS: Record<string, { label: string; detail: string }> = {
     label: 'Composing the soundtrack',
     detail: 'Creating original background music for your episode',
   },
+  quiz: {
+    label: 'Creating quiz and study notes',
+    detail: 'Generating review questions and study materials from the episode',
+  },
   finishing: {
     label: 'Final touches',
     detail: 'Assembling everything into your complete episode',

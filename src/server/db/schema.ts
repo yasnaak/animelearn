@@ -174,6 +174,8 @@ export const episodes = pgTable(
     subtitlesUrl: text('subtitles_url'),
     thumbnailUrl: text('thumbnail_url'),
     durationSeconds: integer('duration_seconds'),
+    quizData: jsonb('quiz_data'),
+    studyNotes: jsonb('study_notes'),
     isPublic: boolean('is_public').notNull().default(false),
     publicSlug: text('public_slug').unique(),
     generationStartedAt: timestamp('generation_started_at'),
