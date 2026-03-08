@@ -21,6 +21,7 @@ import {
   type EpisodeScript,
   type VisualPromptsResult,
   type AudioDirection,
+  type PreviousEpisodeContext,
   generateQuiz,
   generateStudyNotes,
 } from '@/server/services/ai-pipeline';
@@ -188,6 +189,34 @@ export const generationRouter = router({
         .where(eq(episodes.id, episode.id));
 
       try {
+        // Gather context from previous episodes
+        const previousEpisodes: PreviousEpisodeContext[] = [];
+        if (input.episodeNumber > 1) {
+          const readyEpisodes = episodeRows
+            .filter(
+              (e) =>
+                e.episodeNumber < input.episodeNumber &&
+                e.status === 'ready' &&
+                e.script,
+            )
+            .sort((a, b) => a.episodeNumber - b.episodeNumber);
+
+          for (const prev of readyEpisodes) {
+            const prevScript = prev.script as unknown as EpisodeScript;
+            const prevPlanEp = plan.episodes.find(
+              (ep) => ep.episode_number === prev.episodeNumber,
+            );
+            previousEpisodes.push({
+              episodeNumber: prev.episodeNumber,
+              title: prev.title,
+              summaryPoints: prevScript.end_card?.summary_points ?? [],
+              teaserNextEpisode: prevScript.end_card?.teaser_next_episode ?? null,
+              cliffhanger: prevPlanEp?.cliffhanger ?? null,
+              conceptsCovered: prevPlanEp?.concepts_covered ?? [],
+            });
+          }
+        }
+
         // Generate script (uses Opus)
         const scriptResult = await generateScript(
           analysis,
@@ -195,6 +224,7 @@ export const generationRouter = router({
           input.episodeNumber,
           p.language,
           p.targetDurationMinutes,
+          previousEpisodes,
         );
 
         // Validate script (uses Sonnet)
@@ -339,12 +369,41 @@ export const generationRouter = router({
         // ── Step 1: Generate Script ──
         await updateProgress('script', 5, completed);
 
+        // Gather context from previous episodes for series coherence
+        const previousEpisodes: PreviousEpisodeContext[] = [];
+        if (input.episodeNumber > 1) {
+          const readyEpisodes = episodeRows
+            .filter(
+              (e) =>
+                e.episodeNumber < input.episodeNumber &&
+                e.status === 'ready' &&
+                e.script,
+            )
+            .sort((a, b) => a.episodeNumber - b.episodeNumber);
+
+          for (const prev of readyEpisodes) {
+            const prevScript = prev.script as unknown as EpisodeScript;
+            const prevPlanEp = plan.episodes.find(
+              (ep) => ep.episode_number === prev.episodeNumber,
+            );
+            previousEpisodes.push({
+              episodeNumber: prev.episodeNumber,
+              title: prev.title,
+              summaryPoints: prevScript.end_card?.summary_points ?? [],
+              teaserNextEpisode: prevScript.end_card?.teaser_next_episode ?? null,
+              cliffhanger: prevPlanEp?.cliffhanger ?? null,
+              conceptsCovered: prevPlanEp?.concepts_covered ?? [],
+            });
+          }
+        }
+
         const scriptResult = await generateScript(
           analysis,
           plan,
           input.episodeNumber,
           p.language,
           p.targetDurationMinutes,
+          previousEpisodes,
         );
         const validation = await validateScript(
           scriptResult.data,

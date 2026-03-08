@@ -342,6 +342,14 @@ IMPORTANTE: El contenido educativo debe ser EXACTO y PRECISO. No sacrifiques
 precisión por narrativa. Si un concepto tiene matices, inclúyelos. La narrativa
 es el vehículo, no el destino.
 
+CONTINUIDAD ENTRE EPISODIOS:
+Si recibes contexto de episodios anteriores:
+- El opening_hook DEBE conectar con el cliffhanger/teaser del episodio anterior
+- Mantén la personalidad y estado emocional de los personajes coherente
+- Referencia eventos o descubrimientos de episodios previos cuando sea natural
+- No repitas conceptos ya explicados — construye sobre ellos
+- Si un personaje aprendió algo antes, debe recordarlo y aplicarlo
+
 OUTPUT: Responde EXCLUSIVAMENTE con JSON válido, sin texto adicional ni bloques de código.`;
 
 const SCRIPT_SCHEMA = `{
@@ -401,12 +409,22 @@ const SCRIPT_SCHEMA = `{
   }
 }`;
 
+export interface PreviousEpisodeContext {
+  episodeNumber: number;
+  title: string;
+  summaryPoints: string[];
+  teaserNextEpisode: string | null;
+  cliffhanger: string | null;
+  conceptsCovered: string[];
+}
+
 export async function generateScript(
   analysis: ContentAnalysis,
   plan: SeriesPlan,
   episodeNumber: number,
   language: string,
   targetDurationMinutes: number = 5,
+  previousEpisodes: PreviousEpisodeContext[] = [],
 ) {
   const episode = plan.episodes.find((e) => e.episode_number === episodeNumber);
   if (!episode) {
@@ -445,7 +463,24 @@ ${JSON.stringify(
   analysis.concepts.filter((c) => episode.concepts_covered.includes(c.id)),
   null,
   2,
-)}`,
+)}${
+  previousEpisodes.length > 0
+    ? `
+
+PREVIOUS EPISODES CONTEXT (maintain continuity):
+${previousEpisodes
+  .map(
+    (prev) =>
+      `Episode ${prev.episodeNumber} "${prev.title}":
+- Key points covered: ${prev.summaryPoints.join('; ')}
+- Concepts taught: ${prev.conceptsCovered.join(', ')}
+- Ended with: ${prev.cliffhanger ?? prev.teaserNextEpisode ?? 'No cliffhanger'}`,
+  )
+  .join('\n\n')}
+
+IMPORTANT: This is episode ${episodeNumber} of ${plan.series.total_episodes}. Build on what came before — don't repeat it.`
+    : ''
+}`,
     maxTokens: 16384,
     temperature: 0.8,
   });
