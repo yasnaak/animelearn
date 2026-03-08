@@ -19,6 +19,19 @@ export const metadata: Metadata = {
   title: 'AnimeLearn — Transform Content into Anime Episodes',
   description:
     'Transform any educational content into engaging motion comic anime episodes powered by AI.',
+  openGraph: {
+    title: 'AnimeLearn — Transform Content into Anime Episodes',
+    description:
+      'Transform any educational content into engaging motion comic anime episodes powered by AI.',
+    siteName: 'AnimeLearn',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AnimeLearn — Transform Content into Anime Episodes',
+    description:
+      'Transform any educational content into engaging motion comic anime episodes powered by AI.',
+  },
 };
 
 export default function RootLayout({

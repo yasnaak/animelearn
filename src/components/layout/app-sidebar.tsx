@@ -146,7 +146,7 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
               >
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Log out
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

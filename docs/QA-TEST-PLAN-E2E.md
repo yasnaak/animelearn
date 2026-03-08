@@ -1,7 +1,7 @@
 # AnimeLearn - Plan de Test E2E
 
 **Fecha**: Marzo 2026
-**Version**: 1.0
+**Version**: 2.0
 **Plataforma**: https://animelearn.vercel.app
 **Repo**: https://github.com/yasnaak/animelearn
 
@@ -34,11 +34,11 @@
 |---|------|-------------------|
 | 1 | Navegar a `/` | Pagina carga sin errores. Hero visible con titulo "Study Smarter With Anime Episodes" |
 | 2 | Verificar imagen hero | Imagen `/landing/hero.webp` visible, boton play centrado |
-| 3 | Verificar estadisticas | "5 min", "4", "30+" visibles debajo de la imagen |
+| 3 | Verificar estadisticas | "5 min", "4", "3" visibles debajo de la imagen |
 | 4 | Scroll a "How It Works" | 4 tarjetas visibles: Drop Your Material, Pick Your Style, Hit Generate, Watch and Learn |
 | 5 | Scroll a "Subject Gallery" | 4 imagenes de subjects visibles (Biology, History, Physics, Literature) con badges |
 | 6 | Scroll a "Styles" | 4 tarjetas con imagenes reales: Clean Modern, Soft Pastel, Dark Dramatic, Retro Classic |
-| 7 | Scroll a "Features" | 6 feature cards visibles |
+| 7 | Scroll a "Features" | 6 feature cards visibles. Feature "Multiple Languages" (no "30+ Languages") |
 | 8 | Scroll a "Pricing" | 3 planes: Free (0), Creator (29/mo), Pro (89/mo). "Popular" badge en Creator |
 | 9 | Scroll a CTA final | "Stop Rereading. Start Watching." visible |
 | 10 | Verificar footer | Logo, links (How It Works, Pricing, Contact), copyright |
@@ -46,10 +46,10 @@
 ### TC-01.2: Navegacion
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Click en "How It Works" (nav) | Scroll suave a seccion How It Works |
-| 2 | Click en "Styles" (nav) | Scroll suave a seccion Styles |
-| 3 | Click en "Features" (nav) | Scroll suave a seccion Features |
-| 4 | Click en "Pricing" (nav) | Scroll suave a seccion Pricing |
+| 1 | Click en "How It Works" (nav) | Scroll suave a seccion How It Works. Elementos se hacen visibles (fade-in) |
+| 2 | Click en "Styles" (nav) | Scroll suave a seccion Styles. Elementos se hacen visibles |
+| 3 | Click en "Features" (nav) | Scroll suave a seccion Features. Elementos se hacen visibles |
+| 4 | Click en "Pricing" (nav) | Scroll suave a seccion Pricing. Elementos se hacen visibles |
 | 5 | Click en "Sign In" | Redirige a `/login` |
 | 6 | Click en "Get Started" (nav) | Redirige a `/login` |
 | 7 | Click en "Try It Free" (hero) | Redirige a `/login` |
@@ -73,21 +73,25 @@
 ### TC-02.1: Registro con email
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Navegar a `/login` | Formulario de login visible con tabs Sign In / Sign Up |
-| 2 | Seleccionar tab "Sign Up" | Formulario muestra campos: Name, Email, Password |
-| 3 | Dejar campos vacios y enviar | Mensajes de validacion en cada campo requerido |
-| 4 | Introducir email invalido | Mensaje de error de formato email |
-| 5 | Introducir password corto (<8 chars) | Mensaje de error de longitud |
-| 6 | Completar todos los campos correctamente | Registro exitoso. Redireccion a `/dashboard` |
-| 7 | Verificar que se creo `app_profiles` | Tier = "free", episodesUsedThisMonth = 0 |
+| 1 | Navegar a `/login` | Formulario de login visible con descripcion "Sign in to your account" y link "Sign up" abajo |
+| 2 | Click en link "Sign up" | Formulario cambia a registro con campos: Name, Email, Password |
+| 3 | Dejar campos vacios y enviar | Mensaje inline "Email is required" en rojo |
+| 4 | Introducir email invalido (ej. "test@") | Mensaje "Please enter a valid email address" |
+| 5 | Introducir email valido pero password < 8 chars | Mensaje "Password must be at least 8 characters" |
+| 6 | Email + password validos pero nombre vacio | Mensaje "Name is required" |
+| 7 | Completar todos los campos correctamente | Registro exitoso. Redireccion a `/dashboard` |
+| 8 | Verificar que se creo `app_profiles` | Tier = "free", episodesUsedThisMonth = 0 |
 
 ### TC-02.2: Login con email
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Tab "Sign In" activo | Campos Email y Password |
-| 2 | Credenciales incorrectas | Mensaje de error "Invalid credentials" o similar |
-| 3 | Credenciales correctas | Login exitoso. Redireccion a `/dashboard` |
-| 4 | Refrescar pagina | Sesion persiste, sigue en dashboard |
+| 1 | Formulario de Sign In visible (por defecto) | Campos Email y Password |
+| 2 | Email vacio y enviar | Mensaje "Email is required" |
+| 3 | Email invalido | Mensaje "Please enter a valid email address" |
+| 4 | Password < 8 chars | Mensaje "Password must be at least 8 characters" |
+| 5 | Credenciales incorrectas (formato valido) | Mensaje de error del servidor |
+| 6 | Credenciales correctas | Login exitoso. Redireccion a `/dashboard` |
+| 7 | Refrescar pagina | Sesion persiste, sigue en dashboard |
 
 ### TC-02.3: Login con Google OAuth
 | # | Paso | Resultado esperado |
@@ -107,7 +111,7 @@
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Click en avatar/menu de usuario en sidebar | Menu desplegable visible |
-| 2 | Click en "Sign Out" | Sesion cerrada, redireccion a `/login` |
+| 2 | Click en "Sign out" | Sesion cerrada, redireccion a `/login` |
 | 3 | Navegar manualmente a `/dashboard` | Redireccion a `/login` (sesion ya no existe) |
 
 ---
@@ -134,26 +138,35 @@
 ### TC-04.1: Proyecto con PDF
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Navegar a `/dashboard/projects/new` | Formulario con campos: Title, Source tabs (PDF/YouTube), Style, Language |
-| 2 | Dejar titulo vacio y enviar | Error de validacion en titulo |
-| 3 | Escribir titulo: "Biologia Celular" | Campo aceptado |
-| 4 | Tab "PDF" seleccionado por defecto | Area de drag & drop visible |
-| 5 | Click en area o arrastrar archivo PDF valido (<50MB) | Archivo seleccionado, nombre visible, boton "Change" aparece |
-| 6 | Seleccionar estilo "Clean Modern" | Estilo seleccionado visualmente |
-| 7 | Seleccionar idioma "Spanish" | Idioma seleccionado |
-| 8 | Click en "Create Project" | Loading state en boton. Upload + extraccion de texto |
-| 9 | Esperar proceso | Redireccion a pagina de proyecto. Toast de exito |
-| 10 | Verificar pagina de proyecto | rawContent visible con preview del texto extraido. Contador de caracteres y tokens |
+| 1 | Navegar a `/dashboard/projects/new` | Formulario con campos: Title, Visual Style, Language, Episode Duration, Source tabs (PDF/YouTube) |
+| 2 | Verificar grid de opciones | 3 columnas: Visual Style, Language, Episode Duration |
+| 3 | Dejar titulo vacio y enviar | Error de validacion en titulo |
+| 4 | Escribir titulo: "Biologia Celular" | Campo aceptado |
+| 5 | Tab "PDF" seleccionado por defecto | Area de drag & drop visible |
+| 6 | Click en area o arrastrar archivo PDF valido (<50MB) | Archivo seleccionado, nombre visible, boton "Change" aparece |
+| 7 | Seleccionar estilo "Clean Modern" | Estilo seleccionado visualmente |
+| 8 | Seleccionar idioma "Spanish" | Idioma seleccionado |
+| 9 | Seleccionar duracion "~5 minutes" | Duracion seleccionada (opciones: ~3 min, ~5 min, ~10 min) |
+| 10 | Click en "Create Project" | Loading state en boton. Upload + extraccion de texto |
+| 11 | Esperar proceso | Redireccion a pagina de proyecto. Toast de exito |
+| 12 | Verificar pagina de proyecto | rawContent visible con preview del texto extraido. Contador de caracteres y tokens |
 
 ### TC-04.2: Proyecto con YouTube
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Seleccionar tab "YouTube" | Campo URL aparece |
-| 2 | Introducir URL invalida | Error de validacion |
+| 1 | Seleccionar tab "YouTube" | Campo URL aparece con mensaje "coming soon" en amarillo |
+| 2 | Introducir URL invalida (ej. "hola") | Error: "Please enter a valid YouTube URL (e.g. https://youtube.com/watch?v=...)" |
 | 3 | Introducir URL valida de YouTube | URL aceptada |
-| 4 | Click en "Create Project" | Proyecto creado. Transcripcion extraida en background |
+| 4 | Click en "Create Project" | Proyecto creado. Pagina de proyecto muestra "YouTube transcript extraction is not available yet. Please upload a PDF instead." |
 
-### TC-04.3: Validaciones de upload
+### TC-04.3: Duracion de episodio
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Seleccionar ~3 minutes | Se guarda `targetDurationMinutes: 3` |
+| 2 | Seleccionar ~5 minutes (default) | Se guarda `targetDurationMinutes: 5` |
+| 3 | Seleccionar ~10 minutes | Se guarda `targetDurationMinutes: 10` |
+
+### TC-04.4: Validaciones de upload
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Subir archivo que no es PDF (.docx, .jpg) | Error: formato no soportado |
@@ -191,10 +204,18 @@
 ### TC-05.4: Eliminar proyecto
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Click en icono de papelera | Dialogo de confirmacion |
-| 2 | Confirmar eliminacion | Toast "Project deleted". Redireccion a dashboard |
-| 3 | Verificar en dashboard | Proyecto ya no aparece |
-| 4 | Cancelar eliminacion | Dialogo se cierra, nada cambia |
+| 1 | Click en icono de papelera | Dialogo de confirmacion (AlertDialog, no browser confirm) |
+| 2 | Dialogo muestra | Titulo "Delete this project?", descripcion del impacto, botones Cancel y Delete Project |
+| 3 | Click en "Cancel" | Dialogo se cierra, nada cambia |
+| 4 | Click en "Delete Project" | Loading spinner en boton. Toast "Project deleted". Redireccion a dashboard |
+| 5 | Verificar en dashboard | Proyecto ya no aparece |
+
+### TC-05.5: Proyecto YouTube sin contenido
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Abrir proyecto YouTube | Icono AlertCircle amarillo visible |
+| 2 | Mensaje | "YouTube transcript extraction is not available yet. Please upload a PDF instead." |
+| 3 | Boton "Create New Project" | Lleva a `/dashboard/projects/new` |
 
 ---
 
@@ -208,10 +229,11 @@
 | 3 | Progreso: Designing characters | Icono Palette activo. Barra ~15-25%. Checkmark en Script |
 | 4 | Progreso: Planning the visuals | Icono Sparkles activo. Barra ~25-35%. Checkmarks en Script + Characters |
 | 5 | Progreso: Animating scenes | Icono Film activo. Barra ~35-60%. Este paso es el mas largo |
-| 6 | Progreso: Recording voices and music | Icono Music activo. Barra ~68-95% |
-| 7 | Progreso: Episode ready | Icono PartyPopper. Barra 100%. Todos los checkmarks verdes |
-| 8 | Toast: "Episode generated successfully!" | Badge "Ready" aparece en el episodio |
-| 9 | Boton "Watch Episode" aparece | Habilitado |
+| 6 | Progreso: Recording voices and music | Icono Music activo. Barra ~68-88% |
+| 7 | Progreso: Creating quiz and study notes | Barra ~90%. Generando quiz y notas de estudio |
+| 8 | Progreso: Episode ready | Icono PartyPopper. Barra 100%. Todos los checkmarks verdes |
+| 9 | Toast: "Episode generated successfully!" | Badge "Ready" aparece en el episodio |
+| 10 | Botones "Watch Episode" y Share (icono) visibles | Ambos habilitados |
 
 ### TC-06.2: Progreso en tiempo real
 | # | Paso | Resultado esperado |
@@ -235,39 +257,193 @@
 | 1 | Click en "Retry Generation" | Nuevo intento. Progreso desde 0% |
 | 2 | Si tiene exito | Episodio pasa a "Ready" normalmente |
 
-### TC-06.5: Generacion multiples episodios
+### TC-06.5: Generacion multiples episodios (series coherence)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Generar episodio 1 hasta completar | Ready |
 | 2 | Click en "Generate This Episode" del episodio 2 | Generacion inicia. Episodio 1 sigue en Ready |
 | 3 | Verificar que solo un episodio puede generarse a la vez | Boton deshabilitado en otros episodios mientras uno genera |
+| 4 | Verificar coherencia del episodio 2 | Script del episodio 2 referencia eventos/conceptos del episodio 1. Opening hook conecta con cliffhanger anterior |
 
 ---
 
-## TC-07: Seguridad y Autorizacion
+## TC-07: Video Player
 
-### TC-07.1: Aislamiento de datos entre usuarios
+### TC-07.1: Acceso al player
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Click en "Watch Episode" desde pagina de proyecto | Navega a `/watch/[episodeId]` |
+| 2 | Pagina carga | Header con titulo de serie y episodio. Player de video con aspecto 16:9 |
+| 3 | Boton Back (flecha) | Navega de vuelta a la pagina del proyecto |
+
+### TC-07.2: Controles del player (Remotion Player)
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Click en el video | Reproduce/pausa |
+| 2 | Barra de controles | Play/pause, seek bar, tiempo, fullscreen visibles |
+| 3 | Click en fullscreen | Video se expande a pantalla completa |
+| 4 | Doble click en video | Entra/sale de fullscreen |
+| 5 | Presionar espacio | Reproduce/pausa |
+| 6 | Seek bar | Permite navegar a cualquier punto del video |
+
+### TC-07.3: Contenido del video
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Intro (5 segundos) | Fondo gradient oscuro, nombre de serie, numero de episodio, titulo |
+| 2 | Paneles del episodio | Se muestran secuencialmente con transiciones |
+| 3 | End card (15 segundos) | Resumen de puntos clave, teaser del siguiente episodio |
+
+### TC-07.4: Informacion del episodio
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Debajo del player | Titulo "Episode N: [titulo]" |
+| 2 | Sinopsis visible | Texto descriptivo del episodio |
+| 3 | Metadata | Nombre de serie, "Episode N of M", duracion (si disponible) |
+
+### TC-07.5: Episodio no encontrado
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Navegar a `/watch/uuid-invalido` | Mensaje "Episode not found" |
+| 2 | Mensaje complementario | "This episode may not exist or is still being generated." |
+| 3 | Boton "Go to AnimeLearn" | Navega a `/` |
+
+### TC-07.6: OG Meta Tags
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Inspeccionar `<head>` de pagina de episodio ready | `<title>` contiene "Episode N: [titulo] — [serie]" |
+| 2 | Meta `og:title` | Mismo valor que title |
+| 3 | Meta `og:description` | Synopsis del episodio |
+| 4 | Meta `og:type` | "video.episode" |
+| 5 | Meta `twitter:card` | "summary_large_image" |
+
+---
+
+## TC-08: Quiz Post-Episodio
+
+### TC-08.1: Acceso al quiz
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | En pagina `/watch/[episodeId]` con quiz generado | Card "Test your knowledge" visible debajo del player |
+| 2 | Card muestra | Icono BrainCircuit, "N questions based on this episode", boton "Take Quiz" |
+| 3 | Click en "Take Quiz" | Navega a `/watch/[episodeId]/quiz` |
+
+### TC-08.2: Flujo del quiz
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Pagina quiz carga | Header con titulo, contador "1 / N", barra de progreso |
+| 2 | Pregunta visible | Badge de dificultad (easy/medium/hard), concepto testeado, texto de pregunta |
+| 3 | 4 opciones de respuesta | Letras A-D, texto de cada opcion |
+| 4 | Click en una opcion | Opcion seleccionada se resalta en cyan |
+| 5 | Boton "Check Answer" | Habilitado solo si hay opcion seleccionada |
+| 6 | Click en "Check Answer" | Feedback inmediato: verde para correcta, rojo para incorrecta |
+| 7 | Explicacion visible | Texto explicativo debajo de las opciones |
+| 8 | Boton "Next Question" | Aparece despues del feedback |
+| 9 | Avanzar por todas las preguntas | Barra de progreso se llena gradualmente |
+
+### TC-08.3: Pantalla de resultados
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Completar todas las preguntas | Pantalla de resultados con porcentaje grande |
+| 2 | Icono Trophy | Verde si paso (>= passing_score), amarillo si no |
+| 3 | Texto | "X of N correct" + mensaje de felicitacion o animo |
+| 4 | Desglose por pregunta | Lista con checkmark verde o X roja por pregunta |
+| 5 | Boton "Try Again" | Reinicia quiz desde pregunta 1 |
+| 6 | Boton "Back to Episode" | Navega a `/watch/[episodeId]` |
+
+### TC-08.4: Quiz no disponible
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Navegar a `/watch/[episodeId]/quiz` sin quiz generado | Icono BookOpen, "No quiz available yet" |
+| 2 | Boton "Back to Episode" | Navega a `/watch/[episodeId]` |
+
+---
+
+## TC-09: Study Notes
+
+### TC-09.1: Notas de estudio en pagina de watch
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | En pagina `/watch/[episodeId]` con notas generadas | Card "Study Notes" visible (colapsada por defecto) |
+| 2 | Click en header de Study Notes | Card se expande mostrando contenido |
+| 3 | Seccion Summary | Parrafo resumen del episodio |
+| 4 | Seccion Key Concepts | Lista de conceptos con nombre, definicion e importancia |
+| 5 | Seccion Key Takeaways | Lista con bullet points cyan |
+| 6 | Seccion Review Questions | Lista numerada de preguntas abiertas para autoestudio |
+| 7 | Seccion "Coming up next..." (si aplica) | Card con borde cyan, texto de conexion con siguiente episodio |
+| 8 | Click en header de nuevo | Card se colapsa |
+
+### TC-09.2: Sin notas
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Episodio sin studyNotes generadas | Seccion de Study Notes no aparece |
+
+---
+
+## TC-10: Compartir Episodio
+
+### TC-10.1: Dialogo de compartir
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | En pagina de proyecto, episodio Ready | Boton Share (icono) junto a "Watch Episode" |
+| 2 | Click en boton Share | Modal/dialogo "Share Episode" aparece |
+| 3 | Toggle Public/Private | Toggle switch visible. Por defecto: Private (Lock icon) |
+| 4 | Texto privado | "Only you can watch this episode" |
+| 5 | URL del episodio | Input readonly con URL completa `/watch/[episodeId]` |
+| 6 | Boton "Copy" | Copia URL al portapapeles. Toast "Link copied to clipboard" |
+| 7 | Boton "Done" | Cierra el dialogo |
+| 8 | Click fuera del dialogo | Cierra el dialogo |
+
+### TC-10.2: Toggle publico
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Click en toggle (Private -> Public) | Toggle cambia a verde. Globe icon. "Anyone with the link can watch" |
+| 2 | Toast | "Episode is now public" |
+| 3 | Verificar en DB | `episodes.isPublic = true`, `episodes.publicSlug` tiene valor |
+
+### TC-10.3: Toggle privado
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Click en toggle (Public -> Private) | Toggle cambia a gris. Lock icon. "Only you can watch this episode" |
+| 2 | Toast | "Episode is now private" |
+| 3 | Verificar en DB | `episodes.isPublic = false`, `episodes.publicSlug = null` |
+
+### TC-10.4: Acceso publico
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Copiar URL de episodio publico | URL valida |
+| 2 | Abrir URL sin sesion (ventana incognito) | Video player carga correctamente (no requiere auth) |
+| 3 | Quiz y study notes accesibles | Ambos funcionan sin auth |
+
+---
+
+## TC-11: Seguridad y Autorizacion
+
+### TC-11.1: Aislamiento de datos entre usuarios
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Usuario A crea proyecto | Visible solo para Usuario A |
 | 2 | Usuario B accede a `/dashboard` | No ve proyectos de Usuario A |
 | 3 | Usuario B intenta acceder a `/dashboard/projects/[id-de-A]` | "Project not found" o redireccion |
 
-### TC-07.2: Validacion de ownership en API
+### TC-11.2: Validacion de ownership en API
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Llamar `project.get` con ID ajeno via tRPC | Error o null (no leak de datos) |
 | 2 | Llamar `project.delete` con ID ajeno | Error, proyecto no eliminado |
 | 3 | Llamar `generation.analyze` con projectId ajeno | Error |
 | 4 | Llamar `generation.generateEpisode` con projectId ajeno | Error |
+| 5 | Llamar `generation.togglePublic` con projectId ajeno | Error |
 
-### TC-07.3: API sin autenticacion
+### TC-11.3: API sin autenticacion
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Llamar cualquier tRPC procedure sin sesion | Error 401/UNAUTHORIZED |
+| 1 | Llamar cualquier tRPC `protectedProcedure` sin sesion | Error 401/UNAUTHORIZED |
 | 2 | POST a `/api/upload` sin sesion | Error 401 |
+| 3 | Llamar `render.getPublicCompositionProps` sin sesion | Funciona (es public procedure) |
+| 4 | Llamar `learning.getQuiz` sin sesion | Funciona (es public procedure) |
+| 5 | Llamar `learning.getStudyNotes` sin sesion | Funciona (es public procedure) |
 
-### TC-07.4: Upload malicioso
+### TC-11.4: Upload malicioso
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Subir archivo con extension .pdf pero contenido binario malicioso | Extraccion falla graciosamente, no crash |
@@ -276,45 +452,52 @@
 
 ---
 
-## TC-08: Responsividad y UX
+## TC-12: Responsividad y UX
 
-### TC-08.1: Mobile (375x812)
+### TC-12.1: Mobile (375x812)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Landing page | Texto legible, imagenes escalan, grid 1 columna |
 | 2 | Login | Formulario ocupa ancho completo |
 | 3 | Dashboard | Proyectos en 1 columna |
-| 4 | Crear proyecto | Formulario usable, drag & drop funcional |
+| 4 | Crear proyecto | Formulario usable. Grid 3 columnas puede pasar a stack en mobile |
 | 5 | Pagina de proyecto | Contenido legible, botones full-width |
 | 6 | Progreso de generacion | Barra y steps visibles, no overflow |
+| 7 | Video player | Player ocupa ancho completo, aspecto 16:9 mantenido |
+| 8 | Quiz | Preguntas y opciones legibles, botones full-width |
+| 9 | Study notes | Card colapsable funcional en mobile |
 
-### TC-08.2: Tablet (768x1024)
+### TC-12.2: Tablet (768x1024)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Landing page | Grid 2 columnas para subjects y styles |
 | 2 | Dashboard | Grid 2 columnas para proyectos |
+| 3 | Video player | Player con buen tamaño, controles usables |
 
-### TC-08.3: Desktop (1920x1080)
+### TC-12.3: Desktop (1920x1080)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Landing page | Grid completo (4 columnas styles, 2 columnas subjects) |
 | 2 | Dashboard | Grid 3 columnas |
 | 3 | Sidebar | Fija y visible |
+| 4 | Video player | Player grande con max-w-7xl centrado |
 
 ---
 
-## TC-09: Rendimiento y Carga
+## TC-13: Rendimiento y Carga
 
-### TC-09.1: Tiempos de carga
+### TC-13.1: Tiempos de carga
 | # | Metrica | Criterio de aceptacion |
 |---|---------|----------------------|
 | 1 | Landing page LCP | < 2.5s |
 | 2 | Landing page FCP | < 1.8s |
 | 3 | Dashboard (con 10 proyectos) | < 3s |
 | 4 | Pagina de proyecto | < 2s |
-| 5 | Imagenes de landing optimizadas (WebP) | Todas < 500KB |
+| 5 | Video player page | < 3s (incluye carga de composicion) |
+| 6 | Quiz page | < 2s |
+| 7 | Imagenes de landing optimizadas (WebP) | Todas < 500KB |
 
-### TC-09.2: Imagenes
+### TC-13.2: Imagenes
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Verificar que hero.webp usa `priority` (preload) | No layout shift en hero |
@@ -323,24 +506,24 @@
 
 ---
 
-## TC-10: Edge Cases y Errores
+## TC-14: Edge Cases y Errores
 
-### TC-10.1: Contenido extremo
+### TC-14.1: Contenido extremo
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | PDF con 1 palabra | Analisis funciona pero genera 1 episodio corto |
-| 2 | PDF con 200 paginas | Text chunker divide en chunks. Analisis procesa todo |
-| 3 | YouTube video sin subtitulos | Error gracioso indicando que no hay transcripcion |
+| 2 | PDF con 200 paginas | Text chunker divide en chunks. Analisis procesa todo. Multiples episodios generados con coherencia |
+| 3 | YouTube video sin subtitulos | Pagina muestra "YouTube transcript extraction is not available yet" con boton para crear nuevo proyecto |
 | 4 | Contenido en idioma no soportado | AI hace su mejor esfuerzo o indica limitacion |
 
-### TC-10.2: Errores de red
+### TC-14.2: Errores de red
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Perder conexion durante upload PDF | Error mostrado, upload puede reintentarse |
 | 2 | Perder conexion durante generacion | Polling falla, reconecta automaticamente al volver |
 | 3 | API timeout durante analisis | Toast de error, boton habilitado para retry |
 
-### TC-10.3: Concurrencia
+### TC-14.3: Concurrencia
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Abrir misma pagina de proyecto en 2 tabs | Ambas muestran datos consistentes |
@@ -349,31 +532,33 @@
 
 ---
 
-## TC-11: Integraciones Externas (Smoke Tests)
+## TC-15: Integraciones Externas (Smoke Tests)
 
 > Estos tests verifican que las integraciones con servicios externos funcionan. Requieren API keys validas.
 
-### TC-11.1: Claude API (Anthropic)
+### TC-15.1: Claude API (Anthropic)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Analisis de contenido | Claude Sonnet responde con contentAnalysis + seriesPlan |
 | 2 | Generacion de script | Claude Opus genera script valido (pasa validacion) |
-| 3 | Timeout handling | Si Claude tarda >60s, error manejado |
+| 3 | Generacion de quiz | Claude Sonnet genera 5-7 preguntas validas |
+| 4 | Generacion de study notes | Claude Sonnet genera notas estructuradas |
+| 5 | Timeout handling | Si Claude tarda >60s, error manejado |
 
-### TC-11.2: fal.ai (Image Generation)
+### TC-15.2: fal.ai (Image Generation)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Generar character sheet | URL de imagen valida retornada |
 | 2 | Generar panel background | Imagen generada con estilo correcto |
 | 3 | Background removal | Imagen sin fondo retornada |
 
-### TC-11.3: Replicate (LTX-2.3 Video)
+### TC-15.3: Replicate (LTX-2.3 Video)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Generar video clip de panel | URL de video MP4 retornada |
 | 2 | Video con camera motion | Movimiento de camara visible en video |
 
-### TC-11.4: ElevenLabs (Audio)
+### TC-15.4: ElevenLabs (Audio)
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Generar dialogo TTS | Audio MP3/WAV retornado con voz correcta |
@@ -382,16 +567,16 @@
 
 ---
 
-## TC-12: Base de Datos - Integridad
+## TC-16: Base de Datos - Integridad
 
-### TC-12.1: Cascada de eliminacion
+### TC-16.1: Cascada de eliminacion
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Crear proyecto con episodios, panels, audio | Todos los registros existen |
 | 2 | Eliminar proyecto | Todos los registros hijos eliminados (episodes, characters, panels, audioTracks, generationJobs) |
 | 3 | Verificar en DB directamente | No quedan registros huerfanos |
 
-### TC-12.2: Transiciones de estado
+### TC-16.2: Transiciones de estado
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
 | 1 | Proyecto: draft -> analyzing -> planned | Transiciones validas |
@@ -399,18 +584,27 @@
 | 3 | Episodio: cualquier estado -> failed | Posible desde cualquier paso |
 | 4 | Episodio: failed -> planned (retry) | Reset de estado al reintentar |
 
+### TC-16.3: Datos de quiz y study notes
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Episodio ready | `quizData` JSONB no null con estructura de preguntas |
+| 2 | Episodio ready | `studyNotes` JSONB no null con estructura de notas |
+| 3 | Episodio fallido durante quiz step | `quizData` puede ser null (non-critical step). Episodio sigue Ready |
+
 ---
 
 ## Criterios de Aceptacion Global
 
 | Criterio | Descripcion |
 |----------|-------------|
-| Funcional | Todos los TC-01 a TC-12 pasan sin errores criticos |
-| Seguridad | No hay leaks de datos entre usuarios (TC-07) |
-| Performance | LCP < 2.5s en landing, dashboard < 3s (TC-09) |
-| Responsivo | Funcional en mobile, tablet y desktop (TC-08) |
-| Errores | Todos los errores muestran feedback al usuario (TC-10) |
-| Integraciones | Smoke tests de APIs externas pasan (TC-11) |
+| Funcional | Todos los TC-01 a TC-16 pasan sin errores criticos |
+| Seguridad | No hay leaks de datos entre usuarios (TC-11). Public procedures funcionan sin auth |
+| Performance | LCP < 2.5s en landing, dashboard < 3s, player < 3s (TC-13) |
+| Responsivo | Funcional en mobile, tablet y desktop (TC-12) |
+| Errores | Todos los errores muestran feedback al usuario (TC-14) |
+| Integraciones | Smoke tests de APIs externas pasan (TC-15) |
+| Learning | Quiz interactivo funcional con feedback. Study notes legibles (TC-08, TC-09) |
+| Sharing | Toggle public/private funciona. OG tags presentes. Acceso publico sin auth (TC-10) |
 
 ---
 
@@ -418,6 +612,9 @@
 
 1. **API Keys**: Necesitaras acceso a las siguientes env vars para tests de integracion: `ANTHROPIC_API_KEY`, `FAL_KEY`, `ELEVENLABS_API_KEY`, `REPLICATE_API_TOKEN`, `DATABASE_URL`
 2. **Costes**: Los tests de generacion completa (TC-06) consumen creditos de APIs externas. Limitar a 1-2 ejecuciones completas
-3. **Tiempos**: La generacion completa de un episodio tarda entre 3-10 minutos dependiendo de la longitud del contenido
+3. **Tiempos**: La generacion completa de un episodio tarda entre 3-10 minutos dependiendo de la longitud del contenido y la duracion configurada
 4. **Datos de prueba**: Usar PDFs de contenido educativo real (10-50 paginas) para tests representativos
-5. **Features pendientes**: El boton "Watch Episode" (TC-06.1 paso 9) aun no tiene pagina de reproduccion (Fase 6.8). El video no se renderiza aun (solo se ensamblan props de Remotion)
+5. **Video player**: El player usa Remotion Player (renderizado client-side). No es un video MP4 pre-renderizado — se compone en tiempo real en el navegador
+6. **Quiz generation**: El quiz se genera como paso non-critical en la pipeline. Si falla, el episodio sigue quedando Ready pero sin quiz ni study notes
+7. **Public procedures**: Las rutas `/watch/[episodeId]`, `/watch/[episodeId]/quiz` y sus datos (composition props, quiz, study notes) son accesibles sin autenticacion via public tRPC procedures
+8. **Series coherence**: Para validar coherencia entre episodios (TC-06.5 paso 4), generar al menos 2 episodios de un mismo proyecto y verificar que el episodio 2 referencia contenido del episodio 1

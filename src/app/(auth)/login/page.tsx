@@ -68,6 +68,8 @@ export default function LoginPage() {
         }
       }
       router.push('/dashboard');
+    } catch {
+      setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -100,7 +102,7 @@ export default function LoginPage() {
                   id="name"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); setError(''); }}
                   placeholder="Your name"
                 />
               </div>
@@ -111,9 +113,8 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 placeholder="you@example.com"
-                required
               />
             </div>
             <div className="space-y-2">
@@ -122,10 +123,8 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 placeholder="••••••••"
-                required
-                minLength={8}
               />
             </div>
             {error && (
