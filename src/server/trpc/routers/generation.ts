@@ -707,4 +707,46 @@ export const generationRouter = router({
         throw error;
       }
     }),
+
+  togglePublic: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string().uuid(),
+        episodeId: z.string().uuid(),
+        isPublic: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, input.projectId))
+        .limit(1);
+
+      if (!project[0] || project[0].userId !== ctx.user.id) {
+        throw new Error('Project not found');
+      }
+
+      const slug = input.isPublic
+        ? input.episodeId.slice(0, 8) + '-' + Date.now().toString(36)
+        : null;
+
+      await ctx.db
+        .update(episodes)
+        .set({
+          isPublic: input.isPublic,
+          publicSlug: slug,
+          updatedAt: new Date(),
+        })
+        .where(eq(episodes.id, input.episodeId));
+
+      return {
+        success: true,
+        isPublic: input.isPublic,
+        publicSlug: slug,
+        shareUrl: input.isPublic
+          ? `/watch/${input.episodeId}`
+          : null,
+      };
+    }),
 });

@@ -38,6 +38,10 @@ import {
   Film,
   Music,
   PartyPopper,
+  Share2,
+  Copy,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -205,6 +209,137 @@ function GenerationProgress({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ShareButton({
+  episodeId,
+  projectId,
+  isPublic: initialPublic,
+}: {
+  episodeId: string;
+  projectId: string;
+  isPublic: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(initialPublic);
+  const utils = trpc.useUtils();
+
+  const togglePublic = trpc.generation.togglePublic.useMutation({
+    onSuccess: (result) => {
+      setIsPublic(result.isPublic);
+      utils.generation.listEpisodes.invalidate({ projectId });
+      toast.success(
+        result.isPublic ? 'Episode is now public' : 'Episode is now private',
+      );
+    },
+    onError: (error) => {
+      toast.error(`Failed: ${error.message}`);
+    },
+  });
+
+  const shareUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/watch/${episodeId}`
+      : '';
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Link copied to clipboard');
+  };
+
+  const handleToggle = () => {
+    togglePublic.mutate({
+      projectId,
+      episodeId,
+      isPublic: !isPublic,
+    });
+  };
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="lg"
+        onClick={() => setOpen(true)}
+      >
+        <Share2 className="h-4 w-4" />
+      </Button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+        >
+          <div className="mx-4 w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
+            <h3 className="text-lg font-semibold">Share Episode</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Share this episode with anyone via a direct link.
+            </p>
+
+            {/* Public toggle */}
+            <div className="mt-5 flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3">
+              <div className="flex items-center gap-3">
+                {isPublic ? (
+                  <Globe className="h-4 w-4 text-green-400" />
+                ) : (
+                  <Lock className="h-4 w-4 text-zinc-500" />
+                )}
+                <div>
+                  <p className="text-sm font-medium">
+                    {isPublic ? 'Public' : 'Private'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isPublic
+                      ? 'Anyone with the link can watch'
+                      : 'Only you can watch this episode'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleToggle}
+                disabled={togglePublic.isPending}
+                className={`relative h-6 w-11 rounded-full transition-colors ${
+                  isPublic ? 'bg-green-500' : 'bg-zinc-700'
+                }`}
+              >
+                <span
+                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                    isPublic ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Share URL */}
+            <div className="mt-4">
+              <label className="text-xs text-muted-foreground">
+                Episode link
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  readOnly
+                  value={shareUrl}
+                  className="flex-1 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300"
+                />
+                <Button variant="outline" size="sm" onClick={handleCopy}>
+                  <Copy className="mr-1 h-3 w-3" />
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -498,19 +633,26 @@ export default function ProjectPage({
                           </Button>
                         )}
 
-                        {/* Watch button for ready episodes */}
+                        {/* Watch + Share buttons for ready episodes */}
                         {isReady && (
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="w-full"
-                            size="lg"
-                          >
-                            <Link href={`/watch/${ep.id}`}>
-                              <Play className="mr-2 h-4 w-4" />
-                              Watch Episode
-                            </Link>
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              asChild
+                              variant="outline"
+                              className="flex-1"
+                              size="lg"
+                            >
+                              <Link href={`/watch/${ep.id}`}>
+                                <Play className="mr-2 h-4 w-4" />
+                                Watch Episode
+                              </Link>
+                            </Button>
+                            <ShareButton
+                              episodeId={ep.id}
+                              projectId={projectId}
+                              isPublic={ep.isPublic}
+                            />
+                          </div>
                         )}
 
                         {/* Retry for failed episodes */}
