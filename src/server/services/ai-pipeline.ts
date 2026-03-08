@@ -406,17 +406,26 @@ export async function generateScript(
   plan: SeriesPlan,
   episodeNumber: number,
   language: string,
+  targetDurationMinutes: number = 5,
 ) {
   const episode = plan.episodes.find((e) => e.episode_number === episodeNumber);
   if (!episode) {
     throw new Error(`Episode ${episodeNumber} not found in series plan`);
   }
 
+  const panelGuidance =
+    targetDurationMinutes <= 3
+      ? '4-6 panels total (short episode, ~3 minutes)'
+      : targetDurationMinutes <= 5
+        ? '6-10 panels total (standard episode, ~5 minutes)'
+        : '10-16 panels total (long episode, ~10 minutes)';
+
   return callClaude<EpisodeScript>({
     model: 'opus',
     systemPrompt: SCRIPT_SYSTEM_PROMPT,
     userPrompt: `Generate a complete panel-by-panel script for episode ${episodeNumber}.
 
+TARGET DURATION: ${targetDurationMinutes} minutes. Use ${panelGuidance}.
 Language for all dialogue and narration: ${language}
 
 Follow this JSON schema exactly:

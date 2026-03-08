@@ -194,6 +194,7 @@ export const generationRouter = router({
           plan,
           input.episodeNumber,
           p.language,
+          p.targetDurationMinutes,
         );
 
         // Validate script (uses Sonnet)
@@ -343,6 +344,7 @@ export const generationRouter = router({
           plan,
           input.episodeNumber,
           p.language,
+          p.targetDurationMinutes,
         );
         const validation = await validateScript(
           scriptResult.data,

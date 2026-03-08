@@ -38,6 +38,7 @@ export const projectRouter = router({
           .enum(['clean_modern', 'soft_pastel', 'dark_dramatic', 'retro_classic'])
           .default('clean_modern'),
         language: z.string().default('es'),
+        targetDurationMinutes: z.number().int().min(1).max(15).default(5),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -50,6 +51,7 @@ export const projectRouter = router({
           sourceUrl: input.sourceUrl,
           style: input.style,
           language: input.language,
+          targetDurationMinutes: input.targetDurationMinutes,
         })
         .returning();
 

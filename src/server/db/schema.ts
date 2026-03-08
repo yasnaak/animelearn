@@ -131,6 +131,7 @@ export const projects = pgTable(
     seriesPlan: jsonb('series_plan'),
     style: text('style').notNull().default('clean_modern'),
     language: text('language').notNull().default('es'),
+    targetDurationMinutes: integer('target_duration_minutes').notNull().default(5),
     totalEpisodes: integer('total_episodes'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),

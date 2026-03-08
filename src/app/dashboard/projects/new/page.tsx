@@ -32,6 +32,7 @@ export default function NewProjectPage() {
   const [title, setTitle] = useState('');
   const [style, setStyle] = useState('clean_modern');
   const [language, setLanguage] = useState('en');
+  const [duration, setDuration] = useState('5');
 
   // PDF state
   const [file, setFile] = useState<File | null>(null);
@@ -105,6 +106,7 @@ export default function NewProjectPage() {
         sourceUrl: sourceType === 'youtube' ? youtubeUrl.trim() : undefined,
         style: style as 'clean_modern' | 'soft_pastel' | 'dark_dramatic' | 'retro_classic',
         language,
+        targetDurationMinutes: parseInt(duration, 10),
       });
 
       if (!project) {
@@ -176,7 +178,7 @@ export default function NewProjectPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Visual Style</Label>
                 <Select value={style} onValueChange={setStyle}>
@@ -202,6 +204,20 @@ export default function NewProjectPage() {
                     <SelectItem value="en">English</SelectItem>
                     <SelectItem value="es">Spanish</SelectItem>
                     <SelectItem value="ja">Japanese</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Episode Duration</Label>
+                <Select value={duration} onValueChange={setDuration}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">~3 minutes</SelectItem>
+                    <SelectItem value="5">~5 minutes</SelectItem>
+                    <SelectItem value="10">~10 minutes</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
