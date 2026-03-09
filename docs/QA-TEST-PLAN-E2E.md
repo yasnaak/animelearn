@@ -106,6 +106,7 @@
 | 1 | Sin sesion, navegar a `/dashboard` | Redireccion a `/login` |
 | 2 | Sin sesion, navegar a `/dashboard/projects/new` | Redireccion a `/login` |
 | 3 | Sin sesion, navegar a `/dashboard/settings` | Redireccion a `/login` |
+| 4 | Con sesion activa, navegar a `/login` | Redireccion automatica a `/dashboard` |
 
 ### TC-02.5: Logout
 | # | Paso | Resultado esperado |
@@ -113,6 +114,7 @@
 | 1 | Click en avatar/menu de usuario en sidebar | Menu desplegable visible |
 | 2 | Click en "Sign out" | Sesion cerrada, redireccion a `/login` |
 | 3 | Navegar manualmente a `/dashboard` | Redireccion a `/login` (sesion ya no existe) |
+| 4 | Inmediatamente tras logout, llamar `project.list` via DevTools/fetch | Error 401/UNAUTHORIZED (no datos cacheados) |
 
 ---
 
@@ -437,11 +439,21 @@
 ### TC-11.3: API sin autenticacion
 | # | Paso | Resultado esperado |
 |---|------|-------------------|
-| 1 | Llamar cualquier tRPC `protectedProcedure` sin sesion | Error 401/UNAUTHORIZED |
-| 2 | POST a `/api/upload` sin sesion | Error 401 |
-| 3 | Llamar `render.getPublicCompositionProps` sin sesion | Funciona (es public procedure) |
-| 4 | Llamar `learning.getQuiz` sin sesion | Funciona (es public procedure) |
-| 5 | Llamar `learning.getStudyNotes` sin sesion | Funciona (es public procedure) |
+| 1 | Llamar `project.list` sin sesion (ventana incognito) | Error 401/UNAUTHORIZED |
+| 2 | Llamar `project.get` sin sesion (ventana incognito) | Error 401/UNAUTHORIZED |
+| 3 | POST a `/api/upload` sin sesion (ventana incognito) | Error 401 |
+| 4 | Llamar `render.getPublicCompositionProps` sin sesion | Funciona (es public procedure) |
+| 5 | Llamar `learning.getQuiz` sin sesion | Funciona (es public procedure) |
+| 6 | Llamar `learning.getStudyNotes` sin sesion | Funciona (es public procedure) |
+
+### TC-11.5: Invalidacion de sesion post-logout
+| # | Paso | Resultado esperado |
+|---|------|-------------------|
+| 1 | Login con credenciales QA | Sesion activa, dashboard visible |
+| 2 | Abrir DevTools > Console | Preparar para ejecutar fetch manual |
+| 3 | Hacer logout via "Sign out" | Redireccion a `/login` |
+| 4 | Ejecutar `fetch('/api/trpc/project.list')` en consola | Response status 401 (no 200). No devuelve datos |
+| 5 | Ejecutar `fetch('/api/upload', {method:'POST'})` en consola | Response status 401 (no 400) |
 
 ### TC-11.4: Upload malicioso
 | # | Paso | Resultado esperado |
@@ -618,3 +630,5 @@
 6. **Quiz generation**: El quiz se genera como paso non-critical en la pipeline. Si falla, el episodio sigue quedando Ready pero sin quiz ni study notes
 7. **Public procedures**: Las rutas `/watch/[episodeId]`, `/watch/[episodeId]/quiz` y sus datos (composition props, quiz, study notes) son accesibles sin autenticacion via public tRPC procedures
 8. **Series coherence**: Para validar coherencia entre episodios (TC-06.5 paso 4), generar al menos 2 episodios de un mismo proyecto y verificar que el episodio 2 referencia contenido del episodio 1
+9. **Sesion post-logout (TC-11.5)**: Verificar siempre desde ventana incognito O inmediatamente tras logout. La sesion debe invalidarse al instante (sin cache). Si se obtiene 200 en endpoints protegidos tras logout, reportar como critico
+10. **Validacion formularios**: El formulario de login usa `noValidate` — toda la validacion es JS inline. No deben aparecer tooltips nativos del navegador en ningun caso
