@@ -4,12 +4,18 @@ import { episodes, projects } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { SeriesPlan } from '@/server/services/ai-pipeline';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ episodeId: string }>;
 }): Promise<Metadata> {
   const { episodeId } = await params;
+
+  if (!UUID_RE.test(episodeId)) {
+    return { title: 'Episode Not Found — AnimeLearn' };
+  }
 
   const episode = await db
     .select({

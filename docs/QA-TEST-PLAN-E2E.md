@@ -1,7 +1,7 @@
 # AnimeLearn - Plan de Test E2E
 
 **Fecha**: Marzo 2026
-**Version**: 2.0
+**Version**: 2.1
 **Plataforma**: https://animelearn.vercel.app
 **Repo**: https://github.com/yasnaak/animelearn
 
@@ -39,7 +39,7 @@
 | 5 | Scroll a "Subject Gallery" | 4 imagenes de subjects visibles (Biology, History, Physics, Literature) con badges |
 | 6 | Scroll a "Styles" | 4 tarjetas con imagenes reales: Clean Modern, Soft Pastel, Dark Dramatic, Retro Classic |
 | 7 | Scroll a "Features" | 6 feature cards visibles. Feature "Multiple Languages" (no "30+ Languages") |
-| 8 | Scroll a "Pricing" | 3 planes: Free (0), Creator (29/mo), Pro (89/mo). "Popular" badge en Creator |
+| 8 | Scroll a "Pricing" | 3 planes: Free (€0), Creator (€29/mo), Pro (€89/mo). "Popular" badge en Creator |
 | 9 | Scroll a CTA final | "Stop Rereading. Start Watching." visible |
 | 10 | Verificar footer | Logo, links (How It Works, Pricing, Contact), copyright |
 
@@ -632,3 +632,6 @@
 8. **Series coherence**: Para validar coherencia entre episodios (TC-06.5 paso 4), generar al menos 2 episodios de un mismo proyecto y verificar que el episodio 2 referencia contenido del episodio 1
 9. **Sesion post-logout (TC-11.5)**: Verificar siempre desde ventana incognito O inmediatamente tras logout. La sesion debe invalidarse al instante (sin cache). Si se obtiene 200 en endpoints protegidos tras logout, reportar como critico
 10. **Validacion formularios**: El formulario de login usa `noValidate` — toda la validacion es JS inline. No deben aparecer tooltips nativos del navegador en ningun caso
+11. **Verificar deploy antes de testear**: Antes de iniciar el test, verificar que el ultimo commit esta deployado. Ir a https://github.com/yasnaak/animelearn/commits/main y comparar el ultimo commit con la version en produccion. Si hay commits pendientes de deploy, esperar a que Vercel termine
+12. **Responsividad**: Para tests mobile/tablet (TC-12), usar Chrome DevTools > Toggle Device Toolbar (Ctrl+Shift+M) para emular dispositivos. No depender del redimensionamiento del browser
+13. **Moneda**: Los precios en la landing page estan en euros (€). Esto es intencional
