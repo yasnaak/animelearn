@@ -39,6 +39,9 @@ export async function generateSpeech(options: TTSOptions): Promise<TTSResult> {
     speed = 1.0,
   } = options;
 
+  // ElevenLabs speed must be between 0.7 and 1.2
+  const clampedSpeed = Math.min(1.2, Math.max(0.7, speed));
+
   const audioStream = await getClient().textToSpeech.convert(voiceId, {
     text,
     modelId: 'eleven_multilingual_v2',
@@ -46,7 +49,7 @@ export async function generateSpeech(options: TTSOptions): Promise<TTSResult> {
       stability,
       similarityBoost,
       style,
-      speed,
+      speed: clampedSpeed,
     },
     outputFormat: 'mp3_44100_128',
   });

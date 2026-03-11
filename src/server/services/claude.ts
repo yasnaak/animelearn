@@ -27,8 +27,8 @@ interface ClaudeResult<T> {
 }
 
 const MODEL_MAP = {
-  sonnet: 'claude-sonnet-4-5-20241022',
-  opus: 'claude-opus-4-5-20250514',
+  sonnet: 'claude-sonnet-4-6',
+  opus: 'claude-opus-4-6',
 } as const;
 
 const MAX_RETRIES = 3;

@@ -4,7 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Player } from '@remotion/player';
+import { trpc } from '@/lib/trpc/client';
+import { EpisodeComposition } from '@/remotion/EpisodeComposition';
+import type { EpisodeCompositionProps } from '@/remotion/types';
 import {
   Sparkles,
   Upload,
@@ -74,13 +78,36 @@ function useReveal() {
   return ref;
 }
 
-/* ───────── main page ───────── */
-// Demo video — replace with your own YouTube video ID or URL
-const DEMO_VIDEO_ID = 'dQw4w9WgXcQ'; // placeholder — swap with a real demo
+/* ───────── constants ───────── */
+const DEMO_EPISODE_ID = '63e31033-b67e-46d4-949f-e34d19dc5768';
+const FPS = 30;
+const INTRO_FRAMES = 150;
+const END_CARD_FRAMES = 450;
+const TRANSITION_FRAMES = 15;
 
+function calcFrames(props: EpisodeCompositionProps): number {
+  let f = 0;
+  for (const scene of props.scenes) {
+    for (let i = 0; i < scene.panels.length; i++) {
+      f += scene.panels[i].durationFrames;
+      if (i < scene.panels.length - 1) f -= TRANSITION_FRAMES;
+    }
+  }
+  return INTRO_FRAMES + f + END_CARD_FRAMES;
+}
+
+/* ───────── main page ───────── */
 export default function LandingPage() {
   const revealRef = useReveal();
   const [videoOpen, setVideoOpen] = useState(false);
+  const { data: demoData } = trpc.render.getPublicCompositionProps.useQuery(
+    { episodeId: DEMO_EPISODE_ID },
+    { retry: false, refetchOnWindowFocus: false },
+  );
+  const totalFrames = useMemo(
+    () => (demoData?.props ? calcFrames(demoData.props) : 900),
+    [demoData?.props],
+  );
 
   return (
     <div ref={revealRef} className="dark relative min-h-screen overflow-hidden bg-[#08080f] text-white">
@@ -194,12 +221,26 @@ export default function LandingPage() {
             </div>
           ) : (
             <div className="aspect-video w-full bg-black">
-              <iframe
-                src={`https://www.youtube.com/embed/${DEMO_VIDEO_ID}?autoplay=1&rel=0`}
-                allow="autoplay; encrypted-media; fullscreen"
-                allowFullScreen
-                className="h-full w-full"
-              />
+              {demoData?.props ? (
+                <Player
+                  component={EpisodeComposition as unknown as React.ComponentType<Record<string, unknown>>}
+                  inputProps={demoData.props}
+                  durationInFrames={totalFrames}
+                  compositionWidth={1920}
+                  compositionHeight={1080}
+                  fps={FPS}
+                  style={{ width: '100%', height: '100%' }}
+                  controls
+                  autoPlay
+                  clickToPlay
+                  doubleClickToFullscreen
+                  spaceKeyToPlayOrPause
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+                </div>
+              )}
             </div>
           )}
         </div>

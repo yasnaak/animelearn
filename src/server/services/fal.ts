@@ -1,8 +1,12 @@
 import { fal } from '@fal-ai/client';
 
-fal.config({
-  credentials: process.env.FAL_KEY,
-});
+let _falConfigured = false;
+function ensureFalConfig() {
+  if (!_falConfigured) {
+    fal.config({ credentials: process.env.FAL_KEY });
+    _falConfigured = true;
+  }
+}
 
 // Style prompt modifiers from the design doc
 const STYLE_MODIFIERS: Record<string, { prompt: string; negative: string }> = {
@@ -60,6 +64,7 @@ interface FalImageResult {
 export async function generateImage(
   options: GenerateImageOptions,
 ): Promise<FalImageResult> {
+  ensureFalConfig();
   const {
     prompt,
     negativePrompt,
@@ -122,6 +127,7 @@ export async function generateCharacterSheet(
   visualDescription: string,
   style: string,
 ): Promise<FalImageResult> {
+  ensureFalConfig();
   const styleMod = getStyleModifiers(style);
 
   const prompt = `anime character design sheet, ${styleMod.prompt}, front view, full body, ${visualDescription}, white background, clean line art, detailed outfit, cel shading, high quality, professional character design, multiple expressions reference`;
@@ -182,6 +188,7 @@ function getLayoutDimensions(layout: string): {
 export async function generatePanelLayers(
   input: PanelGenerationInput,
 ): Promise<PanelGenerationResult> {
+  ensureFalConfig();
   const styleMod = getStyleModifiers(input.style);
   const { width, height } = getLayoutDimensions(input.layout);
 
@@ -242,6 +249,7 @@ export async function generatePanelLayers(
 export async function removeBackground(
   imageUrl: string,
 ): Promise<string> {
+  ensureFalConfig();
   const result = await fal.subscribe('fal-ai/birefnet', {
     input: { image_url: imageUrl },
   });
