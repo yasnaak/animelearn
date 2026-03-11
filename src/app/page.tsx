@@ -2,11 +2,6 @@
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
@@ -170,48 +165,44 @@ export default function LandingPage() {
           </Button>
         </div>
 
-        {/* hero showcase image + play button */}
-        <div
-          className="al-reveal group relative mt-16 w-full cursor-pointer overflow-hidden rounded-2xl border border-zinc-700/40 shadow-2xl shadow-cyan-500/10"
-          onClick={() => setVideoOpen(true)}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-[#08080f] via-transparent to-transparent z-10 pointer-events-none" />
-          <Image
-            src="/landing/hero.webp"
-            alt="AI-generated anime classroom scene with holographic scientific diagrams"
-            width={1920}
-            height={1080}
-            className="w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-            priority
-          />
-          <div className="absolute inset-0 z-20 flex items-center justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl transition-transform group-hover:scale-110">
-              <Play className="h-7 w-7 text-white ml-1" />
+        {/* hero showcase — image with inline video player */}
+        <div className="al-reveal relative mt-16 w-full overflow-hidden rounded-2xl border border-zinc-700/40 shadow-2xl shadow-cyan-500/10">
+          {!videoOpen ? (
+            <div
+              className="group relative cursor-pointer"
+              onClick={() => setVideoOpen(true)}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[#08080f] via-transparent to-transparent z-10 pointer-events-none" />
+              <Image
+                src="/landing/hero.webp"
+                alt="AI-generated anime classroom scene with holographic scientific diagrams"
+                width={1920}
+                height={1080}
+                className="w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                priority
+              />
+              <div className="absolute inset-0 z-20 flex items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl transition-transform group-hover:scale-110">
+                  <Play className="h-7 w-7 text-white ml-1" />
+                </div>
+              </div>
+              <div className="absolute bottom-4 left-4 z-20">
+                <span className="rounded-full bg-black/60 backdrop-blur-sm px-3 py-1 text-xs text-zinc-300">
+                  Watch demo
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="absolute bottom-4 left-4 z-20">
-            <span className="rounded-full bg-black/60 backdrop-blur-sm px-3 py-1 text-xs text-zinc-300">
-              Watch demo
-            </span>
-          </div>
+          ) : (
+            <div className="aspect-video w-full bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${DEMO_VIDEO_ID}?autoplay=1&rel=0`}
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+                className="h-full w-full"
+              />
+            </div>
+          )}
         </div>
-
-        {/* Video demo modal */}
-        <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
-          <DialogContent className="max-w-4xl border-zinc-800 bg-black p-0 overflow-hidden">
-            <DialogTitle className="sr-only">Demo video</DialogTitle>
-            <div className="aspect-video w-full">
-              {videoOpen && (
-                <iframe
-                  src={`https://www.youtube.com/embed/${DEMO_VIDEO_ID}?autoplay=1&rel=0`}
-                  allow="autoplay; encrypted-media; fullscreen"
-                  allowFullScreen
-                  className="h-full w-full"
-                />
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* hero stats */}
         <div className="al-reveal mt-12 grid grid-cols-3 gap-8 border-t border-zinc-800/60 pt-10 sm:gap-16">
