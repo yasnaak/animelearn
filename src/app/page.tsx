@@ -172,11 +172,6 @@ export default function LandingPage() {
             className="w-full object-cover"
             priority
           />
-          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl pointer-events-auto cursor-pointer transition-transform hover:scale-110">
-              <Play className="h-7 w-7 text-white ml-1" />
-            </div>
-          </div>
         </div>
 
         {/* hero stats */}
