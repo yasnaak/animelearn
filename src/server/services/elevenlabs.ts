@@ -153,15 +153,20 @@ export async function listVoices() {
   }));
 }
 
-// Default voice mappings for anime character archetypes
+// Anime-optimized voice mappings using expressive ElevenLabs voices
 export const DEFAULT_VOICE_MAP: Record<string, string> = {
-  // These are placeholder ElevenLabs voice IDs — replace with actual IDs
-  protagonist_male: '21m00Tcm4TlvDq8ikWAM', // Rachel (placeholder)
-  protagonist_female: 'EXAVITQu4vr4xnSDxMaL', // Bella
-  mentor: 'VR6AewLTigWG4xSOukaG', // Arnold
-  rival: 'pNInz6obpgDQGcFmaJgB', // Adam
-  narrator: 'ThT5KcBeYPX3keUQqHPh', // Dorothy
-  comic_relief: 'AZnzlk1XvdvUeBnXmlld', // Domi
+  protagonist_male: 'IKne3meq5aSn9XLyUdCD',   // Charlie — energetic, young, confident
+  protagonist: 'IKne3meq5aSn9XLyUdCD',         // Charlie
+  protagonist_female: 'cgSgspJ2msm6clMCkdW9',  // Jessica — playful, bright, warm
+  mentor: 'JBFqnCBsd6RMkjVDRZzb',              // George — warm storyteller
+  sensei: 'JBFqnCBsd6RMkjVDRZzb',              // George
+  rival: 'SOYHLrjzK2X1ezoPC6cr',               // Harry — fierce warrior
+  antagonist: 'SOYHLrjzK2X1ezoPC6cr',          // Harry
+  narrator: 'JBFqnCBsd6RMkjVDRZzb',            // George — warm storyteller
+  comic_relief: 'N2lVS1w4EtoT3dr4eOWO',        // Callum — husky trickster
+  sidekick: 'N2lVS1w4EtoT3dr4eOWO',            // Callum
+  support_female: 'FGY2WhTYpPnrIDTdsKH5',      // Laura — enthusiast, quirky
+  support_male: 'TX3LPaxmHKxFdv7VOQHJ',        // Liam — energetic
 };
 
 export function getVoiceForRole(

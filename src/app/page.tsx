@@ -79,7 +79,7 @@ function useReveal() {
 }
 
 /* ───────── constants ───────── */
-const DEMO_EPISODE_ID = '63e31033-b67e-46d4-949f-e34d19dc5768';
+const DEMO_EPISODE_ID = '037e90d9-fcb6-4427-ac7e-65e8eee56fd1';
 const FPS = 30;
 const INTRO_FRAMES = 150;
 const END_CARD_FRAMES = 450;

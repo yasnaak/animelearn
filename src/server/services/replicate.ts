@@ -162,10 +162,9 @@ export function mapParallaxToCamera(
 }
 
 /**
- * Generate an anime scene video clip from panel data
- * Two modes:
- * - If referenceImageUrl provided: image-to-video (animate the still panel)
- * - Otherwise: text-to-video from prompt
+ * Generate an anime scene video clip from panel data.
+ * Primary: fal.ai (Wan-2.1 image-to-video) — works with existing fal.ai credits.
+ * Fallback: Replicate LTX-2.3 (requires separate Replicate credits).
  */
 export async function generateSceneClip(params: {
   prompt: string;
@@ -176,9 +175,24 @@ export async function generateSceneClip(params: {
 }): Promise<VideoResult> {
   const { prompt, referenceImageUrl, cameraMotion = 'static', duration = 6, usePro = false } = params;
 
-  // Enhance prompt with anime style keywords
   const animePrompt = `${prompt}, anime style, cinematic anime, high quality animation, smooth motion, detailed`;
 
+  // Try fal.ai first (image-to-video) if we have a reference image
+  if (referenceImageUrl) {
+    try {
+      const { generateVideoFromStill } = await import('./fal');
+      const result = await generateVideoFromStill({
+        prompt: animePrompt,
+        imageUrl: referenceImageUrl,
+        duration: Math.min(duration, 5),
+      });
+      return result;
+    } catch (falError) {
+      console.warn('[Video] fal.ai video failed, trying Replicate:', falError instanceof Error ? falError.message : falError);
+    }
+  }
+
+  // Fallback to Replicate LTX-2.3
   if (referenceImageUrl) {
     return generateVideoFromImage({
       prompt: animePrompt,

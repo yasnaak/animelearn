@@ -243,6 +243,51 @@ export async function generatePanelLayers(
 }
 
 // ============================================================
+// VIDEO GENERATION (image-to-video via fal.ai)
+// ============================================================
+
+interface FalVideoResult {
+  videoUrl: string;
+  durationSeconds: number;
+}
+
+/**
+ * Animate a still image into video using fal.ai's LTX Video model
+ */
+export async function generateVideoFromStill(options: {
+  prompt: string;
+  imageUrl: string;
+  duration?: number;
+}): Promise<FalVideoResult> {
+  ensureFalConfig();
+  const { prompt, imageUrl, duration = 5 } = options;
+
+  // Use Wan-2.1 image-to-video (high quality anime-friendly model on fal.ai)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = await fal.subscribe('fal-ai/wan-i2v' as any, {
+    input: {
+      prompt: `${prompt}, anime style, cinematic anime, smooth motion, high quality animation`,
+      image_url: imageUrl,
+      num_frames: 81, // ~5s at 16fps — Wan-2.1 works best at 81 frames
+      fps: 16,
+      enable_safety_checker: false,
+    } as Record<string, unknown>,
+  });
+
+  const data = result.data as Record<string, unknown>;
+  const video = data.video as { url: string } | undefined;
+
+  if (!video?.url) {
+    throw new Error('No video generated from fal.ai');
+  }
+
+  return {
+    videoUrl: video.url,
+    durationSeconds: duration,
+  };
+}
+
+// ============================================================
 // BACKGROUND REMOVAL
 // ============================================================
 
