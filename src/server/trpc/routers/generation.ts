@@ -6,6 +6,7 @@ import {
   panels,
   audioTracks,
   generationJobs,
+  appProfiles,
 } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -24,6 +25,7 @@ import {
   type PreviousEpisodeContext,
   generateQuiz,
   generateStudyNotes,
+  generateFlashcards,
 } from '@/server/services/ai-pipeline';
 import {
   generateCharacterSheet,
@@ -32,6 +34,7 @@ import {
   generateImage,
   getStyleModifiers,
 } from '@/server/services/fal';
+import { PLAN_LIMITS } from '@/lib/stripe';
 import {
   generateSpeech,
   generateSoundEffect,
@@ -311,6 +314,14 @@ export const generationRouter = router({
       if (!p || p.userId !== ctx.user.id) throw new Error('Project not found');
       if (!p.contentAnalysis || !p.seriesPlan) {
         throw new Error('Project must be analyzed first');
+      }
+
+      // Quota enforcement
+      const limit = PLAN_LIMITS[ctx.profile.tier] ?? 1;
+      if (ctx.profile.episodesUsedThisMonth >= limit) {
+        throw new Error(
+          `You've reached your monthly limit of ${limit} episode${limit !== 1 ? 's' : ''}. Upgrade your plan to generate more.`,
+        );
       }
 
       const analysis = p.contentAnalysis as unknown as ContentAnalysis;
@@ -700,7 +711,7 @@ export const generationRouter = router({
         try {
           const contentAnalysis = p.contentAnalysis as unknown as ContentAnalysis;
 
-          const [quizResult, notesResult] = await Promise.all([
+          const [quizResult, notesResult, flashcardsResult] = await Promise.all([
             generateQuiz(script, contentAnalysis, input.episodeNumber, p.language),
             generateStudyNotes(
               script,
@@ -709,6 +720,7 @@ export const generationRouter = router({
               script.end_card.teaser_next_episode,
               p.language,
             ),
+            generateFlashcards(script, contentAnalysis, input.episodeNumber, p.language),
           ]);
 
           await ctx.db
@@ -716,6 +728,7 @@ export const generationRouter = router({
             .set({
               quizData: quizResult.data as unknown as Record<string, unknown>,
               studyNotes: notesResult.data as unknown as Record<string, unknown>,
+              flashcardData: flashcardsResult.data as unknown as Record<string, unknown>,
               updatedAt: new Date(),
             })
             .where(eq(episodes.id, episode.id));
@@ -743,6 +756,15 @@ export const generationRouter = router({
           .update(generationJobs)
           .set({ completedAt: new Date() })
           .where(eq(generationJobs.id, jobId));
+
+        // Increment monthly usage
+        await ctx.db
+          .update(appProfiles)
+          .set({
+            episodesUsedThisMonth: ctx.profile.episodesUsedThisMonth + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(appProfiles.id, ctx.profile.id));
 
         return { success: true, episodeId: episode.id };
       } catch (error) {

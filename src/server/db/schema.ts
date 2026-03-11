@@ -8,6 +8,7 @@ import {
   pgEnum,
   boolean,
   index,
+  real,
 } from 'drizzle-orm/pg-core';
 
 // === ENUMS ===
@@ -177,6 +178,7 @@ export const episodes = pgTable(
     durationSeconds: integer('duration_seconds'),
     quizData: jsonb('quiz_data'),
     studyNotes: jsonb('study_notes'),
+    flashcardData: jsonb('flashcard_data'),
     isPublic: boolean('is_public').notNull().default(false),
     publicSlug: text('public_slug').unique(),
     generationStartedAt: timestamp('generation_started_at'),
@@ -250,4 +252,30 @@ export const generationJobs = pgTable(
     completedAt: timestamp('completed_at'),
   },
   (table) => [index('generation_jobs_episode_id_idx').on(table.episodeId)],
+);
+
+export const flashcardProgress = pgTable(
+  'flashcard_progress',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    episodeId: uuid('episode_id')
+      .notNull()
+      .references(() => episodes.id, { onDelete: 'cascade' }),
+    cardId: text('card_id').notNull(),
+    easeFactor: real('ease_factor').notNull().default(2.5),
+    interval: integer('interval').notNull().default(0),
+    repetitions: integer('repetitions').notNull().default(0),
+    nextReviewDate: timestamp('next_review_date').notNull().defaultNow(),
+    lastReviewedAt: timestamp('last_reviewed_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('flashcard_progress_user_episode_idx').on(
+      table.userId,
+      table.episodeId,
+    ),
+  ],
 );

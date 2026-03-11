@@ -105,6 +105,7 @@ export default function LandingPage() {
           <a href="#styles" className="transition-colors hover:text-white">Styles</a>
           <a href="#features" className="transition-colors hover:text-white">Features</a>
           <a href="#pricing" className="transition-colors hover:text-white">Pricing</a>
+          <Link href="/examples" className="transition-colors hover:text-white">Examples</Link>
         </div>
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
@@ -475,30 +476,15 @@ export default function LandingPage() {
             Pricing
           </Badge>
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-            Start Free. Upgrade When You Need More.
+            Simple Pricing. No Surprises.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-zinc-400">
-            No credit card required. Your first episode is on us.
+            Choose the plan that fits your study load.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-6 lg:grid-cols-3">
+        <div className="mt-16 grid gap-6 lg:grid-cols-2 lg:max-w-4xl lg:mx-auto">
           {[
-            {
-              name: 'Free',
-              price: '0',
-              period: '',
-              desc: 'Try it out with your first lecture',
-              features: [
-                '1 episode per month',
-                '720p output',
-                'All 4 visual styles',
-                'Basic voice selection',
-                'Community support',
-              ],
-              cta: 'Get Started',
-              highlight: false,
-            },
             {
               name: 'Creator',
               price: '29',
@@ -509,7 +495,6 @@ export default function LandingPage() {
                 '1080p output',
                 'All 4 visual styles',
                 'Full voice library',
-                'Custom characters',
                 'Priority rendering',
                 'Email support',
               ],
@@ -526,11 +511,9 @@ export default function LandingPage() {
                 '4K output',
                 'All 4 visual styles',
                 'Full voice library',
-                'Custom characters',
                 'Series continuity',
-                'API access',
                 'Priority support',
-                'Custom branding',
+                'MP4 download',
               ],
               cta: 'Go Pro',
               highlight: false,
@@ -553,8 +536,8 @@ export default function LandingPage() {
               <h3 className="text-lg font-bold">{plan.name}</h3>
               <p className="mt-1 text-sm text-zinc-500">{plan.desc}</p>
               <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold">{plan.price === '0' ? 'Free' : `\u20AC${plan.price}`}</span>
-                {plan.period ? <span className="text-sm text-zinc-500">{plan.period}</span> : null}
+                <span className="text-4xl font-extrabold">{`\u20AC${plan.price}`}</span>
+                <span className="text-sm text-zinc-500">{plan.period}</span>
               </div>
 
               <Button
@@ -583,6 +566,14 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+
+        <p className="mt-8 text-center text-sm text-zinc-500">
+          Want to try first?{' '}
+          <Link href="/examples" className="text-cyan-400 hover:underline">
+            Check out our example episodes
+          </Link>{' '}
+          — no account needed.
+        </p>
       </section>
 
       {/* ═══════════ CTA FINAL ═══════════ */}

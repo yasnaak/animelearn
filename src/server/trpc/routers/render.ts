@@ -1,6 +1,6 @@
 import { router, protectedProcedure, publicProcedure } from '../init';
 import { projects, episodes, panels, audioTracks } from '@/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { assembleEpisodeProps } from '@/server/services/render';
 import type {
@@ -158,6 +158,46 @@ export const renderRouter = router({
         projectId: p.id,
       };
     }),
+
+  // List public example episodes for the showcase
+  listExamples: publicProcedure.query(async ({ ctx }) => {
+    const publicEpisodes = await ctx.db
+      .select({
+        id: episodes.id,
+        title: episodes.title,
+        episodeNumber: episodes.episodeNumber,
+        synopsis: episodes.synopsis,
+        durationSeconds: episodes.durationSeconds,
+        projectId: episodes.projectId,
+      })
+      .from(episodes)
+      .where(
+        and(eq(episodes.isPublic, true), eq(episodes.status, 'ready')),
+      )
+      .orderBy(desc(episodes.createdAt))
+      .limit(6);
+
+    // Enrich with project/series info
+    const enriched = await Promise.all(
+      publicEpisodes.map(async (ep) => {
+        const project = (
+          await ctx.db
+            .select({ title: projects.title, style: projects.style, seriesPlan: projects.seriesPlan })
+            .from(projects)
+            .where(eq(projects.id, ep.projectId))
+            .limit(1)
+        )[0];
+        const plan = project?.seriesPlan as { series?: { title?: string } } | null;
+        return {
+          ...ep,
+          seriesTitle: plan?.series?.title ?? project?.title ?? 'Untitled',
+          style: project?.style ?? 'clean_modern',
+        };
+      }),
+    );
+
+    return enriched;
+  }),
 
   // Mark episode as ready (after render completes)
   markReady: protectedProcedure

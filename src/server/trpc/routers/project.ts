@@ -2,6 +2,7 @@ import { router, protectedProcedure } from '../init';
 import { projects } from '@/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
+import { extractYouTubeTranscript } from '@/server/services/youtube-extractor';
 
 export const projectRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -56,6 +57,42 @@ export const projectRouter = router({
         .returning();
 
       return result[0];
+    }),
+
+  extractYoutube: protectedProcedure
+    .input(z.object({ projectId: z.string().uuid(), url: z.string().url() }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, input.projectId))
+        .limit(1);
+
+      const project = result[0];
+      if (!project || project.userId !== ctx.user.id) {
+        throw new Error('Project not found');
+      }
+
+      const { text, videoId, durationSeconds } =
+        await extractYouTubeTranscript(input.url);
+
+      if (text.length < 50) {
+        throw new Error(
+          'Transcript too short — the video may not have enough spoken content.',
+        );
+      }
+
+      const minutes = Math.round(durationSeconds / 60);
+      await ctx.db
+        .update(projects)
+        .set({
+          rawContent: text,
+          description: `YouTube video (${minutes} min) — ${videoId}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(projects.id, input.projectId));
+
+      return { textLength: text.length, durationSeconds, videoId };
     }),
 
   delete: protectedProcedure

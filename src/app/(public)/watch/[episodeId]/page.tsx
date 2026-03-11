@@ -13,7 +13,9 @@ import {
   BrainCircuit,
   ChevronDown,
   ChevronUp,
+  Download,
   Loader2,
+  RotateCcw,
   Lightbulb,
   HelpCircle,
 } from 'lucide-react';
@@ -168,6 +170,11 @@ export default function WatchEpisodePage({
     { enabled: !!data },
   );
 
+  const { data: flashcardData } = trpc.learning.getFlashcards.useQuery(
+    { episodeId },
+    { enabled: !!data },
+  );
+
   const totalFrames = useMemo(() => {
     if (!data?.props) return 300;
     return calculateTotalFrames(data.props);
@@ -260,6 +267,19 @@ export default function WatchEpisodePage({
                 <span>{Math.round(episode.durationSeconds / 60)} min</span>
               )}
             </div>
+            <div className="mt-4">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="text-zinc-300"
+              >
+                <a href={`/api/download/${episodeId}`} download>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download MP4
+                </a>
+              </Button>
+            </div>
           </div>
 
           {/* Quiz CTA */}
@@ -280,6 +300,30 @@ export default function WatchEpisodePage({
                 <Button asChild size="sm" className="bg-gradient-to-r from-fuchsia-500 to-cyan-500">
                   <Link href={`/watch/${episodeId}/quiz`}>
                     Take Quiz
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Flashcards CTA */}
+          {flashcardData?.deck && flashcardData.deck.cards.length > 0 && (
+            <Card className="border-cyan-500/20 bg-gradient-to-r from-cyan-950/20 to-fuchsia-950/20">
+              <CardContent className="flex items-center gap-4 py-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500/10">
+                  <RotateCcw className="h-5 w-5 text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-zinc-200">
+                    Review with flashcards
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {flashcardData.deck.cards.length} cards with spaced repetition
+                  </p>
+                </div>
+                <Button asChild size="sm" variant="outline" className="border-cyan-500/30 text-cyan-300">
+                  <Link href={`/watch/${episodeId}/flashcards`}>
+                    Study Now
                   </Link>
                 </Button>
               </CardContent>

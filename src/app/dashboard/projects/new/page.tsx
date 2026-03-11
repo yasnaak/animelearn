@@ -48,6 +48,7 @@ export default function NewProjectPage() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
 
   const createProject = trpc.project.create.useMutation();
+  const extractYoutube = trpc.project.extractYoutube.useMutation();
 
   const handleFileDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -114,7 +115,7 @@ export default function NewProjectPage() {
         return;
       }
 
-      // 2. Upload PDF if applicable
+      // 2. Upload PDF or extract YouTube transcript
       if (sourceType === 'pdf' && file) {
         setUploadState('uploading');
 
@@ -139,6 +140,19 @@ export default function NewProjectPage() {
         setUploadState('done');
         toast.success(
           `PDF processed: ${result.numPages} pages, ${Math.round(result.textLength / 1000)}K characters`,
+        );
+      } else if (sourceType === 'youtube' && youtubeUrl.trim()) {
+        setUploadState('extracting');
+
+        const result = await extractYoutube.mutateAsync({
+          projectId: project.id,
+          url: youtubeUrl.trim(),
+        });
+
+        setUploadState('done');
+        const minutes = Math.round(result.durationSeconds / 60);
+        toast.success(
+          `YouTube transcript extracted: ${minutes} min video, ${Math.round(result.textLength / 1000)}K characters`,
         );
       }
 
@@ -339,8 +353,8 @@ export default function NewProjectPage() {
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                 </div>
-                <p className="text-xs text-amber-500">
-                  YouTube transcript extraction is coming soon. For now, please use PDF upload.
+                <p className="text-xs text-muted-foreground">
+                  We extract the transcript automatically. The video must have captions enabled.
                 </p>
               </TabsContent>
             </Tabs>
@@ -358,15 +372,17 @@ export default function NewProjectPage() {
           <Button
             type="submit"
             disabled={
-              createProject.isPending || uploadState === 'uploading' || uploadState === 'extracting'
+              createProject.isPending || extractYoutube.isPending || uploadState === 'uploading' || uploadState === 'extracting'
             }
             className="flex-1"
           >
-            {createProject.isPending || uploadState === 'uploading' || uploadState === 'extracting' ? (
+            {createProject.isPending || extractYoutube.isPending || uploadState === 'uploading' || uploadState === 'extracting' ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {uploadState === 'extracting'
-                  ? 'Processing PDF...'
+                  ? sourceType === 'youtube'
+                    ? 'Extracting transcript...'
+                    : 'Processing PDF...'
                   : 'Creating project...'}
               </>
             ) : (

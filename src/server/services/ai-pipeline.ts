@@ -145,6 +145,15 @@ export interface StudyNotes {
   connections_to_next: string | null;
 }
 
+export interface FlashcardDeck {
+  cards: Array<{
+    id: string;
+    front: string;
+    back: string;
+    category: 'definition' | 'concept' | 'application' | 'comparison';
+  }>;
+}
+
 // ============================================================
 // PHASE 1: CONTENT ANALYSIS
 // ============================================================
@@ -1014,6 +1023,73 @@ TEASER FOR NEXT EPISODE: ${teaserNext ?? 'None (final episode)'}
 
 Follow this schema:
 ${STUDY_NOTES_SCHEMA}`,
+    maxTokens: 4096,
+    temperature: 0.5,
+  });
+}
+
+// ============================================================
+// PHASE 7B: FLASHCARD GENERATION
+// ============================================================
+
+const FLASHCARD_SYSTEM_PROMPT = `You are an expert flashcard creator specializing in active recall. Generate flashcards that test understanding, not just memorization.
+
+RULES:
+- Each card should test ONE concept clearly
+- Front: a specific question, prompt, or fill-in-the-blank
+- Back: a concise, complete answer
+- Include a mix of categories: definitions, concepts, applications, comparisons
+- Use the same language as the episode content
+- Assign each card a unique id like "fc_01", "fc_02", etc.
+- Generate 8-12 cards per episode
+
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
+
+const FLASHCARD_SCHEMA = `{
+  "cards": [
+    {
+      "id": "fc_01",
+      "front": "string (question or prompt)",
+      "back": "string (concise answer)",
+      "category": "definition | concept | application | comparison"
+    }
+  ]
+}`;
+
+export async function generateFlashcards(
+  script: EpisodeScript,
+  analysis: ContentAnalysis,
+  episodeNumber: number,
+  language: string,
+) {
+  const episodeConcepts = analysis.concepts.map((c) => ({
+    name: c.name,
+    description: c.description,
+    key_facts: c.key_facts,
+    analogy: c.real_world_analogy,
+  }));
+
+  return callClaude<FlashcardDeck>({
+    model: 'sonnet',
+    systemPrompt: FLASHCARD_SYSTEM_PROMPT,
+    userPrompt: `Generate flashcards for Episode ${episodeNumber}: "${script.episode.title}"
+
+Language: ${language}
+
+EPISODE SUMMARY POINTS:
+${JSON.stringify(script.end_card.summary_points)}
+
+CONCEPTS COVERED:
+${JSON.stringify(episodeConcepts, null, 2)}
+
+EDUCATIONAL NOTES:
+${script.scenes
+  .flatMap((s) => s.panels.map((p) => p.educational_note))
+  .filter(Boolean)
+  .join('\n- ')}
+
+Follow this schema:
+${FLASHCARD_SCHEMA}`,
     maxTokens: 4096,
     temperature: 0.5,
   });
