@@ -11,6 +11,32 @@ function getClient(): ElevenLabsClient {
   return _client;
 }
 
+/**
+ * Retry wrapper for transient ElevenLabs API failures (rate limits, timeouts).
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  { maxRetries = 2, baseDelayMs = 1500, label = 'ElevenLabs call' } = {},
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        const delay = baseDelayMs * Math.pow(2, attempt);
+        console.warn(
+          `[retry] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`,
+          err instanceof Error ? err.message : err,
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 // ============================================================
 // TEXT TO SPEECH
 // ============================================================
@@ -42,17 +68,21 @@ export async function generateSpeech(options: TTSOptions): Promise<TTSResult> {
   // ElevenLabs speed must be between 0.7 and 1.2
   const clampedSpeed = Math.min(1.2, Math.max(0.7, speed));
 
-  const audioStream = await getClient().textToSpeech.convert(voiceId, {
-    text,
-    modelId: 'eleven_multilingual_v2',
-    voiceSettings: {
-      stability,
-      similarityBoost,
-      style,
-      speed: clampedSpeed,
-    },
-    outputFormat: 'mp3_44100_128',
-  });
+  const audioStream = await withRetry(
+    () =>
+      getClient().textToSpeech.convert(voiceId, {
+        text,
+        modelId: 'eleven_multilingual_v2',
+        voiceSettings: {
+          stability,
+          similarityBoost,
+          style,
+          speed: clampedSpeed,
+        },
+        outputFormat: 'mp3_44100_128',
+      }),
+    { label: 'TTS' },
+  );
 
   // Collect stream into buffer
   const reader = audioStream.getReader();
@@ -83,10 +113,14 @@ export async function generateSoundEffect(
   description: string,
   durationSeconds: number = 3,
 ): Promise<SFXResult> {
-  const result = await getClient().textToSoundEffects.convert({
-    text: description,
-    durationSeconds,
-  });
+  const result = await withRetry(
+    () =>
+      getClient().textToSoundEffects.convert({
+        text: description,
+        durationSeconds,
+      }),
+    { label: 'SFX' },
+  );
 
   const reader = (result as ReadableStream<Uint8Array>).getReader();
   const chunks: Uint8Array[] = [];
@@ -114,12 +148,16 @@ export async function generateMusic(
   prompt: string,
   durationSeconds: number = 30,
 ): Promise<MusicResult> {
-  const stream = await getClient().music.compose({
-    prompt,
-    musicLengthMs: durationSeconds * 1000,
-    outputFormat: 'mp3_44100_128',
-    forceInstrumental: true,
-  });
+  const stream = await withRetry(
+    () =>
+      getClient().music.compose({
+        prompt,
+        musicLengthMs: durationSeconds * 1000,
+        outputFormat: 'mp3_44100_128',
+        forceInstrumental: true,
+      }),
+    { label: 'music' },
+  );
 
   // Collect stream into buffer
   const reader = stream.getReader();
@@ -175,4 +213,90 @@ export function getVoiceForRole(
 ): string {
   if (customVoiceId) return customVoiceId;
   return DEFAULT_VOICE_MAP[role] ?? DEFAULT_VOICE_MAP.narrator;
+}
+
+// ============================================================
+// DELIVERY → VOICE SETTINGS (v2 — shot-based pipeline)
+// ============================================================
+
+interface DeliveryVoiceSettings {
+  stability: number;
+  similarityBoost: number;
+  style: number;
+  speed: number;
+}
+
+/**
+ * Map screenplay dialogue delivery descriptions to ElevenLabs voice settings.
+ * The delivery field from the screenplay (e.g. "whispered trembling", "shouted with fist raised")
+ * gets translated to optimal TTS parameters for expressive anime voices.
+ */
+export function deliveryToVoiceSettings(delivery: string): DeliveryVoiceSettings {
+  const d = delivery.toLowerCase();
+
+  // Check for specific keywords and combine their effects
+  let stability = 0.5;
+  let similarityBoost = 0.75;
+  let style = 0.6;
+  let speed = 1.0;
+
+  // Volume/intensity modifiers
+  if (d.includes('whisper') || d.includes('murmur') || d.includes('sotto voce')) {
+    stability = 0.3;
+    speed = 0.85;
+    style = 0.7;
+  } else if (d.includes('shout') || d.includes('yell') || d.includes('scream')) {
+    stability = 0.7;
+    speed = 1.15;
+    style = 0.8;
+  } else if (d.includes('quiet') || d.includes('soft') || d.includes('gentle')) {
+    stability = 0.4;
+    speed = 0.9;
+    style = 0.65;
+  } else if (d.includes('loud') || d.includes('booming') || d.includes('commanding')) {
+    stability = 0.65;
+    speed = 1.1;
+    style = 0.75;
+  }
+
+  // Emotional modifiers (layer on top)
+  if (d.includes('trembl') || d.includes('shak') || d.includes('nervous')) {
+    stability = Math.max(0.2, stability - 0.15);
+    style = Math.min(1.0, style + 0.1);
+  }
+  if (d.includes('confident') || d.includes('determined') || d.includes('resolute')) {
+    stability = Math.min(0.8, stability + 0.15);
+    speed = Math.min(1.2, speed + 0.05);
+  }
+  if (d.includes('sad') || d.includes('melanchol') || d.includes('grief')) {
+    speed = Math.max(0.7, speed - 0.1);
+    style = Math.min(1.0, style + 0.1);
+  }
+  if (d.includes('excited') || d.includes('enthusiast') || d.includes('eager')) {
+    speed = Math.min(1.2, speed + 0.1);
+    stability = Math.max(0.2, stability - 0.1);
+    style = Math.min(1.0, style + 0.1);
+  }
+  if (d.includes('calm') || d.includes('serene') || d.includes('composed')) {
+    stability = Math.min(0.8, stability + 0.1);
+    speed = Math.max(0.7, speed - 0.05);
+  }
+  if (d.includes('angry') || d.includes('furious') || d.includes('rage')) {
+    stability = Math.max(0.2, stability - 0.1);
+    speed = Math.min(1.2, speed + 0.1);
+    style = Math.min(1.0, style + 0.15);
+  }
+  if (d.includes('sarcastic') || d.includes('ironic') || d.includes('mocking')) {
+    style = Math.min(1.0, style + 0.15);
+    speed = Math.min(1.2, speed + 0.05);
+  }
+  if (d.includes('dramatic') || d.includes('theatrical')) {
+    style = Math.min(1.0, style + 0.2);
+    stability = Math.max(0.2, stability - 0.1);
+  }
+
+  // Clamp speed to ElevenLabs range
+  speed = Math.min(1.2, Math.max(0.7, speed));
+
+  return { stability, similarityBoost, style, speed };
 }

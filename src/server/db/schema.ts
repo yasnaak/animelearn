@@ -8,7 +8,6 @@ import {
   pgEnum,
   boolean,
   index,
-  real,
 } from 'drizzle-orm/pg-core';
 
 // === ENUMS ===
@@ -38,7 +37,7 @@ export const subscriptionTierEnum = pgEnum('subscription_tier', [
   'pro',
 ]);
 
-export const sourceTypeEnum = pgEnum('source_type', ['pdf', 'youtube']);
+export const sourceTypeEnum = pgEnum('source_type', ['pdf', 'youtube', 'text', 'idea', 'url']);
 
 // === BETTER AUTH TABLES ===
 
@@ -150,12 +149,33 @@ export const characters = pgTable(
     name: text('name').notNull(),
     role: text('role').notNull(),
     visualDescription: text('visual_description').notNull(),
+    signatureFeatures: jsonb('signature_features').$type<string[]>(),
     characterSheetUrl: text('character_sheet_url'),
     voiceId: text('voice_id'),
     personality: jsonb('personality'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [index('characters_project_id_idx').on(table.projectId)],
+);
+
+export const locations = pgTable(
+  'locations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    locationId: text('location_id').notNull(),
+    name: text('name').notNull(),
+    description: text('description').notNull(),
+    keyFeatures: jsonb('key_features').$type<string[]>(),
+    referenceImageUrl: text('reference_image_url'),
+    referencePrompt: text('reference_prompt'),
+    colorPalette: jsonb('color_palette').$type<string[]>(),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('locations_project_id_idx').on(table.projectId)],
 );
 
 export const episodes = pgTable(
@@ -170,15 +190,14 @@ export const episodes = pgTable(
     status: episodeStatusEnum('status').notNull().default('planned'),
     synopsis: text('synopsis'),
     script: jsonb('script'),
+    screenplay: jsonb('screenplay'),
     visualPrompts: jsonb('visual_prompts'),
     audioDirection: jsonb('audio_direction'),
     videoUrl: text('video_url'),
     subtitlesUrl: text('subtitles_url'),
     thumbnailUrl: text('thumbnail_url'),
     durationSeconds: integer('duration_seconds'),
-    quizData: jsonb('quiz_data'),
-    studyNotes: jsonb('study_notes'),
-    flashcardData: jsonb('flashcard_data'),
+    youtubeMetadata: jsonb('youtube_metadata'),
     isPublic: boolean('is_public').notNull().default(false),
     publicSlug: text('public_slug').unique(),
     generationStartedAt: timestamp('generation_started_at'),
@@ -215,6 +234,30 @@ export const panels = pgTable(
   (table) => [index('panels_episode_id_idx').on(table.episodeId)],
 );
 
+export const shots = pgTable(
+  'shots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    episodeId: uuid('episode_id')
+      .notNull()
+      .references(() => episodes.id, { onDelete: 'cascade' }),
+    sceneId: text('scene_id').notNull(),
+    shotId: text('shot_id').notNull(),
+    shotOrder: integer('shot_order').notNull(),
+    shotType: text('shot_type').notNull(),
+    referenceImageUrl: text('reference_image_url'),
+    videoUrl: text('video_url'),
+    locationRefUrl: text('location_ref_url'),
+    characterRefUrls: jsonb('character_ref_urls').$type<Record<string, string>>(),
+    durationSeconds: integer('duration_seconds').notNull().default(5),
+    prompt: jsonb('prompt'),
+    videoPrompt: jsonb('video_prompt'),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [index('shots_episode_id_idx').on(table.episodeId)],
+);
+
 export const audioTracks = pgTable(
   'audio_tracks',
   {
@@ -229,6 +272,7 @@ export const audioTracks = pgTable(
     audioUrl: text('audio_url').notNull(),
     durationMs: integer('duration_ms').notNull(),
     panelId: text('panel_id'),
+    shotId: text('shot_id'),
     metadata: jsonb('metadata'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
@@ -254,28 +298,3 @@ export const generationJobs = pgTable(
   (table) => [index('generation_jobs_episode_id_idx').on(table.episodeId)],
 );
 
-export const flashcardProgress = pgTable(
-  'flashcard_progress',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id')
-      .notNull()
-      .references(() => authUsers.id, { onDelete: 'cascade' }),
-    episodeId: uuid('episode_id')
-      .notNull()
-      .references(() => episodes.id, { onDelete: 'cascade' }),
-    cardId: text('card_id').notNull(),
-    easeFactor: real('ease_factor').notNull().default(2.5),
-    interval: integer('interval').notNull().default(0),
-    repetitions: integer('repetitions').notNull().default(0),
-    nextReviewDate: timestamp('next_review_date').notNull().defaultNow(),
-    lastReviewedAt: timestamp('last_reviewed_at'),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-  },
-  (table) => [
-    index('flashcard_progress_user_episode_idx').on(
-      table.userId,
-      table.episodeId,
-    ),
-  ],
-);

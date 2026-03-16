@@ -16,21 +16,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'AnimeLearn — Transform Content into Anime Episodes',
+  title: 'AnimeForge — Turn Ideas into Anime Series',
   description:
-    'Transform any educational content into engaging motion comic anime episodes powered by AI.',
+    'Turn any idea into a full anime series with AI — characters, voices, music, and cinematic quality. Ready for YouTube in minutes.',
   openGraph: {
-    title: 'AnimeLearn — Transform Content into Anime Episodes',
+    title: 'AnimeForge — Turn Ideas into Anime Series',
     description:
-      'Transform any educational content into engaging motion comic anime episodes powered by AI.',
-    siteName: 'AnimeLearn',
+      'Turn any idea into a full anime series with AI — characters, voices, music, and cinematic quality. Ready for YouTube in minutes.',
+    siteName: 'AnimeForge',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AnimeLearn — Transform Content into Anime Episodes',
+    title: 'AnimeForge — Turn Ideas into Anime Series',
     description:
-      'Transform any educational content into engaging motion comic anime episodes powered by AI.',
+      'Turn any idea into a full anime series with AI — characters, voices, music, and cinematic quality. Ready for YouTube in minutes.',
   },
 };
 

@@ -50,13 +50,10 @@ import { estimateTokens } from '@/server/services/text-chunker';
 
 /* ── Friendly step labels for progress display ── */
 const STEP_LABELS: Record<string, { label: string; detail: string }> = {
+  // V1 (legacy) steps
   script: {
     label: 'Writing the script',
     detail: 'AI is crafting dialogue, characters, and scenes from your material',
-  },
-  characters: {
-    label: 'Designing characters',
-    detail: 'Creating unique character designs that stay consistent throughout',
   },
   visual_prompts: {
     label: 'Planning the visuals',
@@ -66,25 +63,43 @@ const STEP_LABELS: Record<string, { label: string; detail: string }> = {
     label: 'Animating scenes',
     detail: 'Generating cinematic video clips for every panel',
   },
+  // V2 (shot-based) steps
+  screenplay: {
+    label: 'Writing the screenplay',
+    detail: 'AI is crafting a cinematic anime screenplay with shots, dialogue, and camera directions',
+  },
+  locations: {
+    label: 'Creating locations',
+    detail: 'Generating reference images for each unique location to ensure visual consistency',
+  },
+  characters: {
+    label: 'Designing characters',
+    detail: 'Creating detailed character sheets with signature features for consistency',
+  },
+  shot_images: {
+    label: 'Composing shots',
+    detail: 'Generating each camera shot with IP-Adapter references for visual consistency',
+  },
+  shot_animation: {
+    label: 'Animating shots',
+    detail: 'Transforming still shots into cinematic video clips with camera movement',
+  },
+  // Shared steps
   audio_direction: {
     label: 'Planning the audio',
     detail: 'Assigning voices, music cues, and sound effects to each scene',
   },
   audio: {
     label: 'Recording voices and music',
-    detail: 'Generating dialogue, narration, background music, and sound effects',
+    detail: 'Generating expressive dialogue, narration, background music, and sound effects',
   },
   music: {
     label: 'Composing the soundtrack',
     detail: 'Creating original background music for your episode',
   },
-  quiz: {
-    label: 'Creating quiz and study notes',
-    detail: 'Generating review questions and study materials from the episode',
-  },
   finishing: {
     label: 'Final touches',
-    detail: 'Assembling everything into your complete episode',
+    detail: 'Assembling everything into your complete anime episode',
   },
   complete: {
     label: 'Episode ready',
@@ -373,7 +388,7 @@ export default function ProjectPage({
     },
   });
 
-  const generateEpisodeMutation = trpc.generation.generateEpisode.useMutation({
+  const generateEpisodeMutation = trpc.generation.generateEpisodeV2.useMutation({
     onSuccess: () => {
       toast.success('Episode generated successfully!');
       utils.generation.listEpisodes.invalidate({ projectId });
@@ -383,6 +398,8 @@ export default function ProjectPage({
       utils.generation.listEpisodes.invalidate({ projectId });
     },
   });
+
+  const [generatingAll, setGeneratingAll] = useState(false);
 
   const handleDelete = async () => {
     const result = await deleteProject.mutateAsync({ id: projectId });
@@ -399,6 +416,24 @@ export default function ProjectPage({
 
   const handleGenerateEpisode = (episodeNumber: number) => {
     generateEpisodeMutation.mutate({ projectId, episodeNumber });
+  };
+
+  const handleGenerateAll = async () => {
+    if (!episodesList) return;
+    const planned = episodesList.filter((ep) => ep.status === 'planned');
+    if (planned.length === 0) return;
+    setGeneratingAll(true);
+    for (const ep of planned) {
+      try {
+        await generateEpisodeMutation.mutateAsync({
+          projectId,
+          episodeNumber: ep.episodeNumber,
+        });
+      } catch {
+        // Individual episode errors are already toasted
+      }
+    }
+    setGeneratingAll(false);
   };
 
   if (isLoading) {
@@ -442,7 +477,7 @@ export default function ProjectPage({
             {project.title}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {project.sourceType === 'pdf' ? 'PDF' : 'YouTube'} &middot;{' '}
+            {{ pdf: 'PDF', youtube: 'YouTube', idea: 'Idea', text: 'Script', url: 'URL' }[project.sourceType] ?? project.sourceType} &middot;{' '}
             {project.style.replace('_', ' ')} &middot; {project.language}
           </p>
         </div>
@@ -490,7 +525,7 @@ export default function ProjectPage({
             </CardTitle>
             <CardDescription>
               {project.rawContent.length.toLocaleString()} characters
-              &middot; ~{tokenCount.toLocaleString()} tokens extracted from your {project.sourceType === 'pdf' ? 'PDF' : 'YouTube video'}
+              &middot; ~{tokenCount.toLocaleString()} tokens from your {{ pdf: 'PDF', youtube: 'YouTube video', idea: 'idea', text: 'script', url: 'URL' }[project.sourceType] ?? 'content'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -529,11 +564,9 @@ export default function ProjectPage({
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertCircle className="h-12 w-12 text-amber-500" />
-            <h3 className="mt-4 text-lg font-semibold">No content extracted</h3>
+            <h3 className="mt-4 text-lg font-semibold">No content found</h3>
             <p className="mt-1 max-w-sm text-center text-sm text-muted-foreground">
-              {project.sourceType === 'pdf'
-                ? 'The PDF could not be processed. Please try uploading it again.'
-                : 'YouTube transcript extraction is not available yet. Please upload a PDF instead.'}
+              Content could not be extracted from your source. Please try creating a new project.
             </p>
             <Button asChild variant="outline" className="mt-4">
               <Link href="/dashboard/projects/new">Create New Project</Link>
@@ -564,7 +597,28 @@ export default function ProjectPage({
           <Separator />
 
           <div>
-            <h3 className="mb-4 text-lg font-semibold">Episodes</h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Episodes</h3>
+              {episodesList && episodesList.some((ep) => ep.status === 'planned') && (
+                <Button
+                  onClick={handleGenerateAll}
+                  disabled={generateEpisodeMutation.isPending || generatingAll}
+                  className="bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white shadow-lg shadow-cyan-500/10"
+                >
+                  {generatingAll ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating all...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate All Episodes
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
             {episodesList && episodesList.length > 0 ? (
               <div className="space-y-4">
                 {episodesList.map((ep) => {

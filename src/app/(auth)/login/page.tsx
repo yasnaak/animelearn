@@ -93,7 +93,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">AnimeLearn</CardTitle>
+          <CardTitle className="text-2xl font-bold">AnimeForge</CardTitle>
           <CardDescription>
             {isSignUp
               ? 'Create your account'

@@ -45,7 +45,7 @@ export const Transition: React.FC<TransitionProps> = ({
         extrapolateRight: 'clamp',
       });
       break;
-    case 'zoom_out':
+    case 'zoom_out': {
       const scale = interpolate(frame, [0, durationFrames], [1.3, 1.0], {
         extrapolateRight: 'clamp',
       });
@@ -54,6 +54,26 @@ export const Transition: React.FC<TransitionProps> = ({
       });
       transform = `scale(${scale})`;
       break;
+    }
+    case 'whip_pan':
+      transform = `translateX(${interpolate(
+        frame,
+        [0, durationFrames * 0.4, durationFrames],
+        [100, -5, 0],
+        { extrapolateRight: 'clamp' },
+      )}%)`;
+      opacity = interpolate(frame, [0, durationFrames * 0.3], [0.3, 1], {
+        extrapolateRight: 'clamp',
+      });
+      break;
+    case 'match_cut':
+      // Instant cut — no transition, full opacity from frame 0
+      opacity = 1;
+      break;
+    case 'smash_cut':
+      // Brief blackout then snap to content
+      opacity = frame < 1 ? 0 : 1;
+      break;
     default: // 'cut'
       break;
   }
@@ -61,6 +81,16 @@ export const Transition: React.FC<TransitionProps> = ({
   return (
     <AbsoluteFill style={{ opacity, transform }}>
       {children}
+      {type === 'smash_cut' && frame < 3 && (
+        <AbsoluteFill
+          style={{
+            backgroundColor: '#fff',
+            opacity: interpolate(frame, [0, 3], [0.9, 0], {
+              extrapolateRight: 'clamp',
+            }),
+          }}
+        />
+      )}
     </AbsoluteFill>
   );
 };

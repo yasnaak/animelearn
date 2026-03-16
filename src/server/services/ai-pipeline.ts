@@ -8,32 +8,22 @@ import { chunkText } from './text-chunker';
 export interface ContentAnalysis {
   metadata: {
     title: string;
-    subject_area: string;
-    source_type: string;
-    estimated_level: 'beginner' | 'intermediate' | 'advanced';
-    original_tone: 'academic' | 'casual' | 'technical' | 'popular_science';
-    total_concepts: number;
-    estimated_study_time_minutes: number;
+    genre: string;
+    tone: string;
+    target_audience: string;
+    estimated_duration_minutes: number;
     language: string;
   };
-  concepts: Array<{
+  story_elements: Array<{
     id: string;
     name: string;
+    type: 'theme' | 'plot_point' | 'character_seed' | 'visual_opportunity' | 'conflict';
     description: string;
-    difficulty: number;
-    prerequisites: string[];
-    key_facts: string[];
-    common_misconceptions: string[];
-    real_world_analogy: string;
-    emotional_hook: string;
-  }>;
-  concept_relationships: Array<{
-    from: string;
-    to: string;
-    type: 'prerequisite' | 'complementary' | 'contrast' | 'example_of';
+    dramatic_potential: number;
   }>;
   suggested_episode_count: number;
   narrative_opportunities: string[];
+  visual_set_pieces: string[];
 }
 
 export interface SeriesPlan {
@@ -41,7 +31,7 @@ export interface SeriesPlan {
     title: string;
     tagline: string;
     total_episodes: number;
-    tone: 'shonen' | 'seinen' | 'slice_of_life' | 'mystery';
+    tone: 'shonen' | 'seinen' | 'slice_of_life' | 'mystery' | 'horror' | 'comedy' | 'sci_fi' | 'fantasy';
     setting: string;
   };
   characters: Array<{
@@ -57,14 +47,14 @@ export interface SeriesPlan {
   episodes: Array<{
     episode_number: number;
     title: string;
-    archetype: 'discovery' | 'challenge' | 'misconception' | 'connection' | 'mastery';
-    concepts_covered: string[];
+    archetype: 'hook' | 'escalation' | 'twist' | 'climax' | 'resolution';
+    story_beats: string[];
     synopsis: string;
     opening_hook: string;
     climax: string;
     cliffhanger: string | null;
     emotional_arc: string;
-    estimated_panels: number;
+    estimated_shots: number;
   }>;
 }
 
@@ -107,106 +97,206 @@ export interface EpisodeScript {
         character_movement: string;
         effect_layer: string | null;
       };
-      educational_note: string;
     }>;
     transition_to_next: string;
   }>;
   end_card: {
-    summary_points: string[];
+    call_to_action: string[];
     teaser_next_episode: string | null;
   };
 }
 
-export interface QuizData {
-  questions: Array<{
-    id: string;
-    type: 'multiple_choice' | 'true_false';
-    question: string;
-    options: string[];
-    correct_answer: number;
-    explanation: string;
-    difficulty: 'easy' | 'medium' | 'hard';
-    concept_tested: string;
+// ============================================================
+// SHOT-BASED SCREENPLAY TYPES (v2 — cinematic anime production)
+// ============================================================
+
+export interface ScreenplayShot {
+  shot_id: string;
+  shot_type:
+    | 'establishing'
+    | 'wide'
+    | 'medium'
+    | 'close_up'
+    | 'extreme_close_up'
+    | 'over_shoulder'
+    | 'pov'
+    | 'insert'
+    | 'low_angle'
+    | 'high_angle'
+    | 'dutch_angle';
+  framing: string;
+  duration_seconds: 3 | 4 | 5;
+  subject: {
+    character_ids: string[];
+    expressions: string[];
+    poses: string[];
+    actions: string[];
+  };
+  camera: {
+    movement:
+      | 'static'
+      | 'slow_push_in'
+      | 'slow_pull_out'
+      | 'pan_left'
+      | 'pan_right'
+      | 'tilt_up'
+      | 'tilt_down'
+      | 'tracking'
+      | 'crane_up'
+      | 'crane_down'
+      | 'handheld_shake';
+    focus_target: string;
+  };
+  visual_direction: string;
+  dialogue: Array<{
+    character_id: string;
+    text: string;
+    delivery: string;
   }>;
-  passing_score: number;
-  total_points: number;
+  narration: string | null;
+  sfx_cue: string | null;
+  music_cue: 'continue' | 'swell' | 'drop' | 'change' | 'silence' | null;
+  transition:
+    | 'cut'
+    | 'crossfade'
+    | 'fade_black'
+    | 'fade_white'
+    | 'whip_pan'
+    | 'match_cut'
+    | 'smash_cut'
+    | 'dissolve';
+  engagement_beat: string | null;
 }
 
-export interface StudyNotes {
-  title: string;
-  summary: string;
-  key_concepts: Array<{
+export interface ScreenplayBeat {
+  beat_type:
+    | 'action'
+    | 'dialogue'
+    | 'reaction'
+    | 'revelation'
+    | 'silence'
+    | 'montage';
+  shots: ScreenplayShot[];
+}
+
+export interface ScreenplayScene {
+  scene_id: string;
+  location_id: string;
+  time_of_day:
+    | 'dawn'
+    | 'morning'
+    | 'afternoon'
+    | 'sunset'
+    | 'night'
+    | 'midnight';
+  weather: string;
+  mood: string;
+  lighting_notes: string;
+  characters_present: string[];
+  narrative_function: string;
+  beats: ScreenplayBeat[];
+  transition_out:
+    | 'cut'
+    | 'fade_black'
+    | 'fade_white'
+    | 'dissolve'
+    | 'whip_pan'
+    | 'match_cut'
+    | 'smash_cut';
+}
+
+export interface ScreenplayAct {
+  act_number: 1 | 2 | 3;
+  act_title: string;
+  scenes: ScreenplayScene[];
+}
+
+export interface Screenplay {
+  episode: {
+    number: number;
+    title: string;
+    cold_open: string | null;
+    target_duration_seconds: number;
+  };
+  acts: ScreenplayAct[];
+  locations: Array<{
+    location_id: string;
     name: string;
-    definition: string;
-    importance: string;
+    description: string;
+    key_features: string[];
+    color_palette: string[];
+    reference_prompt: string;
   }>;
-  key_takeaways: string[];
-  review_questions: string[];
-  connections_to_next: string | null;
-}
-
-export interface FlashcardDeck {
-  cards: Array<{
-    id: string;
-    front: string;
-    back: string;
-    category: 'definition' | 'concept' | 'application' | 'comparison';
-  }>;
+  end_card: {
+    call_to_action: string[];
+    teaser_next_episode: string | null;
+  };
 }
 
 // ============================================================
 // PHASE 1: CONTENT ANALYSIS
 // ============================================================
 
-const ANALYSIS_SYSTEM_PROMPT = `Eres un analista pedagógico experto. Tu trabajo es analizar contenido educativo
-y extraer su estructura conceptual.
+const ANALYSIS_SYSTEM_PROMPT = `You are an expert anime narrative analyst. Your job is to analyze source material and extract story elements, dramatic potential, and visual opportunities for anime adaptation.
 
-REGLAS:
-- Identifica TODOS los conceptos clave, no solo los más obvios
-- Ordénalos por dependencia: qué necesitas saber antes de qué
-- Clasifica la dificultad de cada concepto (1-5)
-- Identifica relaciones entre conceptos (prerequisito, complementario, contraste)
-- Detecta el tono del contenido original (académico, casual, técnico, divulgativo)
-- Estima el nivel del público objetivo (principiante, intermedio, avanzado)
+RULES:
+- Identify key themes, plot points, and character seeds
+- Rate dramatic potential of each element (1-5)
+- Identify visual set-pieces — moments that would look stunning as anime
+- Suggest genre and tone for the anime adaptation
+- Estimate how many episodes the material warrants
+- Look for conflicts, twists, and emotional hooks
 
-OUTPUT: Responde EXCLUSIVAMENTE con un JSON válido, sin texto adicional ni bloques de código.`;
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
 
 const ANALYSIS_SCHEMA = `{
   "metadata": {
     "title": "string",
-    "subject_area": "string",
-    "source_type": "pdf | youtube_video",
-    "estimated_level": "beginner | intermediate | advanced",
-    "original_tone": "academic | casual | technical | popular_science",
-    "total_concepts": number,
-    "estimated_study_time_minutes": number,
+    "genre": "string",
+    "tone": "string",
+    "target_audience": "string",
+    "estimated_duration_minutes": number,
     "language": "string"
   },
-  "concepts": [
+  "story_elements": [
     {
-      "id": "concept_001",
+      "id": "element_001",
       "name": "string",
+      "type": "theme | plot_point | character_seed | visual_opportunity | conflict",
       "description": "string (1-2 sentences)",
-      "difficulty": number 1-5,
-      "prerequisites": ["concept_ids"],
-      "key_facts": ["string"],
-      "common_misconceptions": ["string"],
-      "real_world_analogy": "string",
-      "emotional_hook": "string"
+      "dramatic_potential": number 1-5
     }
   ],
-  "concept_relationships": [
-    { "from": "concept_id", "to": "concept_id", "type": "prerequisite | complementary | contrast | example_of" }
-  ],
   "suggested_episode_count": number,
-  "narrative_opportunities": ["string"]
+  "narrative_opportunities": ["string"],
+  "visual_set_pieces": ["string"]
 }`;
 
 export async function analyzeContent(
   rawContent: string,
-  sourceType: 'pdf' | 'youtube',
+  sourceType: 'pdf' | 'youtube' | 'text' | 'idea' | 'url',
   language: string,
 ) {
+  // For 'idea' sourceType, use a different prompt that generates story elements from a brief idea
+  if (sourceType === 'idea') {
+    return callClaude<ContentAnalysis>({
+      model: 'sonnet',
+      systemPrompt: ANALYSIS_SYSTEM_PROMPT,
+      userPrompt: `Analyze the following story idea and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\nThe user has provided a brief idea or concept. Expand it into story elements, identify dramatic potential, and suggest visual set-pieces for an anime adaptation.\n\n---\n\n${rawContent}`,
+      maxTokens: 8192,
+      temperature: 0.7,
+    });
+  }
+
+  const sourceLabel =
+    sourceType === 'pdf'
+      ? 'PDF'
+      : sourceType === 'youtube'
+        ? 'YouTube transcript'
+        : sourceType === 'url'
+          ? 'web page content'
+          : 'text content';
+
   const chunks = chunkText(rawContent, { maxTokens: 8000 });
 
   if (chunks.length === 1) {
@@ -214,7 +304,7 @@ export async function analyzeContent(
     return callClaude<ContentAnalysis>({
       model: 'sonnet',
       systemPrompt: ANALYSIS_SYSTEM_PROMPT,
-      userPrompt: `Analyze the following ${sourceType === 'pdf' ? 'PDF' : 'YouTube transcript'} content and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${rawContent}`,
+      userPrompt: `Analyze the following ${sourceLabel} and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${rawContent}`,
       maxTokens: 8192,
       temperature: 0.5,
     });
@@ -237,7 +327,7 @@ export async function analyzeContent(
   const consolidateResult = await callClaude<ContentAnalysis>({
     model: 'sonnet',
     systemPrompt: ANALYSIS_SYSTEM_PROMPT,
-    userPrompt: `You analyzed a document in ${chunks.length} parts. Here are the partial analyses. Consolidate them into a single coherent analysis, removing duplicates, fixing concept IDs to be sequential, and updating relationships.\n\nSchema:\n${ANALYSIS_SCHEMA}\n\nPartial analyses:\n${JSON.stringify(partialAnalyses, null, 2)}`,
+    userPrompt: `You analyzed a document in ${chunks.length} parts. Here are the partial analyses. Consolidate them into a single coherent analysis, removing duplicates, fixing element IDs to be sequential, and updating relationships.\n\nSchema:\n${ANALYSIS_SCHEMA}\n\nPartial analyses:\n${JSON.stringify(partialAnalyses, null, 2)}`,
     maxTokens: 8192,
     temperature: 0.3,
   });
@@ -249,32 +339,32 @@ export async function analyzeContent(
 // PHASE 2: SERIES PLANNING
 // ============================================================
 
-const PLANNING_SYSTEM_PROMPT = `Eres un showrunner de anime educativo. Recibes un análisis de contenido y debes
-planificar una mini-serie que enseñe todo el material.
+const PLANNING_SYSTEM_PROMPT = `You are a professional anime showrunner. You create binge-worthy anime series optimized for YouTube audiences.
 
-PRINCIPIOS DE DISEÑO DE SERIE:
-1. Cada episodio debe ser auto-contenido pero dejar ganas del siguiente
-2. Primer episodio: hook fuerte, introduce personajes, plantea EL problema central
-3. Episodios intermedios: cada uno resuelve un sub-problema mientras revela más complejidad
-4. Último episodio: todo se conecta, momento "eureka" del protagonista
-5. Máximo 3-5 minutos por episodio (10-15 paneles, ~200 palabras de diálogo)
-6. Cada episodio debe cubrir 2-4 conceptos (no más, o se pierde profundidad)
+PRINCIPLES:
+1. Each episode must be self-contained but leave viewers wanting more
+2. First episode: strong hook, introduce characters, set up the central conflict
+3. Middle episodes: escalate stakes, deepen characters, surprise the audience
+4. Final episode: everything comes together, satisfying resolution with room for more
+5. Target 3-5 minutes per episode (50-80 shots, ~200 words of dialogue)
+6. YouTube retention: strong first 10 seconds, pattern interrupts every 30-60 seconds
+7. End each episode with a hook — cliffhanger, question, or tease
 
-ARQUETIPOS DE EPISODIO:
-- "El Descubrimiento": el protagonista encuentra algo nuevo y quiere entenderlo
-- "El Desafío": un problema que parece imposible hasta que aplica lo aprendido
-- "El Malentendido": el protagonista cree algo incorrecto y debe corregir su visión
-- "La Conexión": dos ideas aparentemente separadas resultan estar conectadas
-- "La Maestría": el protagonista demuestra dominio integrando todo
+EPISODE ARCHETYPES:
+- "Hook": grabs the audience, introduces the world and conflict
+- "Escalation": stakes rise, new complications, deeper character development
+- "Twist": expectations subverted, shocking revelation changes everything
+- "Climax": the big confrontation, highest emotional stakes
+- "Resolution": satisfying conclusion, emotional payoff, sets up potential continuation
 
-OUTPUT: Responde EXCLUSIVAMENTE con JSON válido, sin texto adicional ni bloques de código.`;
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
 
 const PLANNING_SCHEMA = `{
   "series": {
     "title": "string (anime-style title)",
     "tagline": "string (one-line hook)",
     "total_episodes": number,
-    "tone": "shonen | seinen | slice_of_life | mystery",
+    "tone": "shonen | seinen | slice_of_life | mystery | horror | comedy | sci_fi | fantasy",
     "setting": "string (where the story takes place)"
   },
   "characters": [
@@ -293,14 +383,14 @@ const PLANNING_SCHEMA = `{
     {
       "episode_number": 1,
       "title": "string",
-      "archetype": "discovery | challenge | misconception | connection | mastery",
-      "concepts_covered": ["concept_ids"],
+      "archetype": "hook | escalation | twist | climax | resolution",
+      "story_beats": ["string"],
       "synopsis": "string (2-3 sentences)",
       "opening_hook": "string",
       "climax": "string",
       "cliffhanger": "string | null",
       "emotional_arc": "string",
-      "estimated_panels": number
+      "estimated_shots": number
     }
   ]
 }`;
@@ -323,43 +413,25 @@ export async function planSeries(
 // PHASE 3: SCRIPT GENERATION
 // ============================================================
 
-const SCRIPT_SYSTEM_PROMPT = `Eres un guionista de anime educativo premiado. Escribes guiones que la gente
-recuerda años después. Tu superpoder: hacer que conceptos complejos se SIENTAN,
-no solo se entiendan.
+const SCRIPT_SYSTEM_PROMPT = `You are an award-winning anime screenwriter. You write scripts that audiences remember years later. Your superpower: creating emotionally compelling stories with stunning visual moments.
 
-REGLAS DE GUIÓN:
-1. SHOW, DON'T TELL — nunca hagas que un personaje "explique" un concepto directamente.
-   En su lugar, haz que lo DESCUBRA, lo EXPERIMENTE, o FALLE al aplicarlo mal.
-2. Cada panel tiene máximo 2 líneas de diálogo (15 palabras por línea máximo).
-   El silencio es poderoso. Usa paneles sin diálogo para momentos de impacto.
-3. La información se transmite por: diálogo (30%), visual (50%), contexto/subtexto (20%)
-4. Cada escena necesita CONFLICTO — incluso si es interno (duda, confusión, miedo a fallar)
-5. Los conceptos erróneos son TAN importantes como los correctos — el espectador
-   aprende viendo al personaje equivocarse y corregirse
-6. Usa el "patrón de tres": introduce concepto → aplica mal → aplica bien
-7. El ritmo alterna: acción/diálogo/silencio/acción — nunca 3 paneles seguidos del mismo tipo
+SCRIPT RULES:
+1. SHOW, DON'T TELL — let characters reveal themselves through action and conflict, not exposition
+2. Each panel has max 2 dialogue lines (15 words per line max). Silence is powerful. Use panels without dialogue for impact moments.
+3. Information is conveyed by: dialogue (30%), visuals (50%), context/subtext (20%)
+4. Every scene needs CONFLICT — external or internal (doubt, fear, rivalry, moral dilemma)
+5. Alternate rhythm: action/dialogue/silence/action — never 3 consecutive panels of the same type
+6. Create memorable moments: dramatic reveals, emotional confrontations, visual spectacles
+7. End with a hook that makes the viewer click "next episode"
 
-FORMATO DE PANEL:
-Cada panel es una unidad visual independiente. Describe:
-- Composición visual (qué se ve, dónde está cada elemento)
-- Expresión de los personajes (emoción específica)
-- Diálogo (si hay)
-- Efecto de sonido o música (si cambia)
-- Movimiento parallax sugerido (qué capa se mueve, en qué dirección)
+CONTINUITY:
+If you receive previous episode context:
+- The opening_hook MUST connect with the previous episode's cliffhanger/teaser
+- Maintain character personality and emotional state consistency
+- Reference events from previous episodes when natural
+- Build on established relationships and conflicts
 
-IMPORTANTE: El contenido educativo debe ser EXACTO y PRECISO. No sacrifiques
-precisión por narrativa. Si un concepto tiene matices, inclúyelos. La narrativa
-es el vehículo, no el destino.
-
-CONTINUIDAD ENTRE EPISODIOS:
-Si recibes contexto de episodios anteriores:
-- El opening_hook DEBE conectar con el cliffhanger/teaser del episodio anterior
-- Mantén la personalidad y estado emocional de los personajes coherente
-- Referencia eventos o descubrimientos de episodios previos cuando sea natural
-- No repitas conceptos ya explicados — construye sobre ellos
-- Si un personaje aprendió algo antes, debe recordarlo y aplicarlo
-
-OUTPUT: Responde EXCLUSIVAMENTE con JSON válido, sin texto adicional ni bloques de código.`;
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
 
 const SCRIPT_SCHEMA = `{
   "episode": {
@@ -405,15 +477,14 @@ const SCRIPT_SCHEMA = `{
             "background_movement": "string",
             "character_movement": "string",
             "effect_layer": "string | null"
-          },
-          "educational_note": "string"
+          }
         }
       ],
       "transition_to_next": "cut | fade_black | fade_white | swipe_left | zoom_out | dissolve"
     }
   ],
   "end_card": {
-    "summary_points": ["string (3-5 key points)"],
+    "call_to_action": ["string (3-5 calls to action: subscribe, comment, next episode)"],
     "teaser_next_episode": "string | null"
   }
 }`;
@@ -424,7 +495,7 @@ export interface PreviousEpisodeContext {
   summaryPoints: string[];
   teaserNextEpisode: string | null;
   cliffhanger: string | null;
-  conceptsCovered: string[];
+  storyBeats: string[];
 }
 
 export async function generateScript(
@@ -467,9 +538,9 @@ ${JSON.stringify(plan.characters, null, 2)}
 EPISODE PLAN:
 ${JSON.stringify(episode, null, 2)}
 
-RELEVANT CONCEPTS FROM ANALYSIS:
+STORY ELEMENTS:
 ${JSON.stringify(
-  analysis.concepts.filter((c) => episode.concepts_covered.includes(c.id)),
+  analysis.story_elements,
   null,
   2,
 )}${
@@ -482,7 +553,7 @@ ${previousEpisodes
     (prev) =>
       `Episode ${prev.episodeNumber} "${prev.title}":
 - Key points covered: ${prev.summaryPoints.join('; ')}
-- Concepts taught: ${prev.conceptsCovered.join(', ')}
+- Story beats: ${prev.storyBeats.join(', ')}
 - Ended with: ${prev.cliffhanger ?? prev.teaserNextEpisode ?? 'No cliffhanger'}`,
   )
   .join('\n\n')}
@@ -490,6 +561,301 @@ ${previousEpisodes
 IMPORTANT: This is episode ${episodeNumber} of ${plan.series.total_episodes}. Build on what came before — don't repeat it.`
     : ''
 }`,
+    maxTokens: 16384,
+    temperature: 0.8,
+  });
+}
+
+// ============================================================
+// PHASE 3B: SCREENPLAY GENERATION (v2 — cinematic anime production)
+// ============================================================
+
+const SCREENPLAY_SYSTEM_PROMPT = `You are a master anime screenwriter and director with deep expertise in cinematic storytelling and narrative design. You create professional-grade anime screenplays that transform source material into compelling, visually stunning stories.
+
+You think in SHOTS — the fundamental unit of anime production. Every shot is a specific camera angle held for 3-5 seconds, exactly like professional anime (Attack on Titan, Demon Slayer, Jujutsu Kaisen).
+
+=== SHOT TYPES AND WHEN TO USE THEM ===
+
+ESTABLISHING SHOT: Wide view of a location. Used at the START of a new scene to orient the viewer. Shows the world, the scale, the atmosphere. Duration: 4-5s.
+  Example: "Aerial view of a vast library built into the side of a mountain, sunset light streaming through stained glass windows, clouds drifting below"
+
+WIDE SHOT: Full-body view of characters in their environment. Used for group scenes, action, movement. Duration: 4-5s.
+  Example: "Three students stand at the edge of a glowing data stream, their silhouettes contrasted against pulsing blue light"
+
+MEDIUM SHOT: Waist-up. The workhorse shot — most dialogue happens here. Shows body language + facial expressions. Duration: 3-5s.
+  Example: "Medium shot of Riko, off-center right, hands gripping a crumbling scroll, eyes wide with realization"
+
+CLOSE-UP: Face/head. Maximum emotional impact. Used for key revelations, intense dialogue, emotional beats. Duration: 3-4s.
+  Example: "Close-up of Sensei Takumi's face, one eye shadowed, a knowing smile forming, cherry blossom petals drifting past"
+
+EXTREME CLOSE-UP: Eyes, hands, an object. Used sparingly for maximum dramatic effect. Duration: 3s.
+  Example: "Extreme close-up of a single equation being written, ink flowing across paper, each symbol glowing faintly as it's completed"
+
+OVER-THE-SHOULDER: Camera behind one character looking at another. Perfect for dialogue exchanges. Creates depth and intimacy. Duration: 3-4s.
+  Example: "Over Riko's shoulder, we see Kai smirking, arms crossed, the training arena stretching behind him"
+
+POV (Point of View): Camera IS the character's eyes. Used for discovery moments, reading, examining. Duration: 3-4s.
+  Example: "POV through Riko's eyes: a holographic diagram unfolds, layers of data rotating slowly, key values highlighted in gold"
+
+INSERT: Close shot of an object, diagram, or detail. Perfect for showing important story details visually. Duration: 3-4s.
+  Example: "Insert shot of the ancient map, camera slowly panning across interconnected nodes, each labeled with a concept name"
+
+LOW ANGLE: Camera looks UP at subject. Makes characters look powerful, imposing, heroic. Duration: 3-4s.
+  Example: "Low angle shot of the mentor standing atop the archive stairs, backlit by a massive glowing crystal, robes flowing"
+
+HIGH ANGLE: Camera looks DOWN. Makes characters look vulnerable, overwhelmed, small. Duration: 3-4s.
+  Example: "High angle looking down at Riko surrounded by towering bookshelves, each shelf containing infinite scrolling data"
+
+DUTCH ANGLE: Tilted camera. Creates unease, tension, disorientation. Use sparingly. Duration: 3s.
+  Example: "Dutch angle on the corridor as reality distorts, the walls bending impossibly, equations floating in mid-air"
+
+=== CAMERA MOVEMENTS ===
+
+static: No movement. Clean, stable. Default for dialogue close-ups.
+slow_push_in: Camera slowly moves toward subject. Builds tension, reveals detail, increases intimacy.
+slow_pull_out: Camera moves away. Reveals context, creates distance, shows scale.
+pan_left / pan_right: Horizontal sweep. Follows action, reveals environment, transitions between subjects.
+tilt_up / tilt_down: Vertical sweep. Reveals height/depth, follows gaze, creates awe or dread.
+tracking: Camera follows a moving subject. Dynamic action, chase sequences.
+crane_up / crane_down: Dramatic vertical movement. Triumph (up), pressure (down).
+handheld_shake: Slight camera shake. Urgency, chaos, emotional intensity. Use sparingly.
+
+=== PACING RULES ===
+
+- Calm/contemplative scenes: 4-5 second shots, fewer cuts per minute (8-10 shots/min)
+- Dialogue scenes: 3-4 second shots, medium pacing (10-14 shots/min)
+- Tension building: 3-4 second shots with occasional long holds for suspense
+- Action/climax: 3 second shots, rapid cutting (14-20 shots/min)
+- Emotional peaks: Mix of very short (3s) and lingering (5s) shots for contrast
+- TOTAL SHOT COUNT: 3 min = 30-50 shots, 5 min = 50-80 shots, 10 min = 100-160 shots
+
+=== NARRATIVE STORYTELLING — HOOK AND ENGAGE ===
+
+CRITICAL: This is anime for YouTube audiences. Every moment must earn the viewer's attention.
+
+DO:
+- Create compelling conflicts that drive every scene
+- Use visual spectacle moments — dramatic reveals, transformations, action sequences
+- Build characters the audience cares about through their actions and choices
+- End each act with a hook — a question, revelation, or cliffhanger
+- Pace for YouTube: strong opening shots, pattern interrupts every 8-10 shots
+
+DON'T:
+- Characters explaining plot to each other (exposition dumps)
+- Narration replacing visual storytelling
+- Scenes that don't move the plot or develop characters
+- Predictable story beats — surprise the audience
+
+=== DIALOGUE RULES ===
+
+- Maximum 2 SHORT sentences per shot (this is anime, not a podcast)
+- Dialogue delivery descriptions are critical for voice acting: "whispered trembling", "shouted with fist raised", "muttered while looking away"
+- Silence is powerful — some shots have NO dialogue, only visuals and music
+- Story exposition through dialogue must feel natural, never forced
+
+=== VISUAL DIRECTION FORMAT ===
+
+The visual_direction field is the MOST IMPORTANT field. It will be used directly as a prompt for AI image generation. Be EXTREMELY detailed:
+
+GOOD: "Anime medium shot, a young woman with short blue hair and round glasses stands in a vast library, warm golden afternoon light streaming through tall arched windows behind her, dust motes floating in the light beams, she holds an ancient leather-bound book open with both hands, her expression shifting from confusion to wonder, bookshelves towering on both sides creating depth, art style: clean modern anime with soft cel shading, warm color palette dominated by amber and deep blue"
+
+BAD: "Riko in the library looking at a book"
+
+Include in EVERY visual_direction:
+1. Art style reference (anime, cel-shaded, specific aesthetic)
+2. Shot type and framing explicitly stated
+3. Character appearance details (hair, clothes, distinguishing features)
+4. Environment details (location, lighting, atmosphere, weather)
+5. Character expression and body language
+6. Color palette / dominant colors
+7. Mood-setting details (particles, effects, atmosphere)
+
+=== LOCATIONS ===
+
+Define all unique locations used in the screenplay. Each location needs:
+- A descriptive name
+- Detailed physical description (architecture, materials, scale)
+- Key visual features that make it unique and recognizable
+- Color palette (5-6 hex codes)
+- A reference_prompt: an ultra-detailed prompt to generate a reference image of this location (NO characters, just the empty environment)
+
+=== 3-ACT STRUCTURE ===
+
+Act 1 (Setup, ~20% of shots): Introduce world, characters, the central conflict or mystery
+Act 2 (Confrontation, ~60% of shots): Characters face obstacles, stakes escalate, relationships deepen. The bulk of the story.
+Act 3 (Resolution, ~20% of shots): The climax, emotional payoff, resolution, teaser for next episode.
+
+=== OUTPUT FORMAT ===
+
+Respond EXCLUSIVELY with valid JSON matching the provided schema. No additional text, no code blocks, no commentary.`;
+
+const SCREENPLAY_SCHEMA = `{
+  "episode": {
+    "number": 1,
+    "title": "string",
+    "cold_open": "string | null (brief dramatic opening before title card)",
+    "target_duration_seconds": 300
+  },
+  "acts": [
+    {
+      "act_number": 1,
+      "act_title": "string",
+      "scenes": [
+        {
+          "scene_id": "s01",
+          "location_id": "loc_library",
+          "time_of_day": "dawn | morning | afternoon | sunset | night | midnight",
+          "weather": "string",
+          "mood": "string (emotional atmosphere)",
+          "lighting_notes": "string (specific lighting for this scene)",
+          "characters_present": ["char_001", "char_002"],
+          "narrative_function": "string (hook | tension_build | reveal | action | emotional_beat)",
+          "beats": [
+            {
+              "beat_type": "action | dialogue | reaction | revelation | silence | montage",
+              "shots": [
+                {
+                  "shot_id": "s01_b01_sh01",
+                  "shot_type": "establishing | wide | medium | close_up | extreme_close_up | over_shoulder | pov | insert | low_angle | high_angle | dutch_angle",
+                  "framing": "string (specific framing description)",
+                  "duration_seconds": 3,
+                  "subject": {
+                    "character_ids": ["char_001"],
+                    "expressions": ["wonder", "concentration"],
+                    "poses": ["standing, leaning forward"],
+                    "actions": ["reaching toward a floating symbol"]
+                  },
+                  "camera": {
+                    "movement": "static | slow_push_in | slow_pull_out | pan_left | pan_right | tilt_up | tilt_down | tracking | crane_up | crane_down | handheld_shake",
+                    "focus_target": "string (what the camera focuses on)"
+                  },
+                  "visual_direction": "string (ULTRA-DETAILED prompt for AI image generation — minimum 50 words)",
+                  "dialogue": [
+                    {
+                      "character_id": "char_001",
+                      "text": "string (max 2 short sentences)",
+                      "delivery": "string (how the line is delivered: whispered, shouted, calm, trembling, etc.)"
+                    }
+                  ],
+                  "narration": "string | null",
+                  "sfx_cue": "string | null (sound effect description)",
+                  "music_cue": "continue | swell | drop | change | silence | null",
+                  "transition": "cut | crossfade | fade_black | fade_white | whip_pan | match_cut | smash_cut | dissolve",
+                  "engagement_beat": "string | null (retention hook, pattern interrupt, or payoff — what keeps the viewer watching)"
+                }
+              ]
+            }
+          ],
+          "transition_out": "cut | fade_black | fade_white | dissolve | whip_pan | match_cut | smash_cut"
+        }
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "location_id": "loc_library",
+      "name": "string",
+      "description": "string (detailed physical description)",
+      "key_features": ["string (unique visual element)"],
+      "color_palette": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
+      "reference_prompt": "string (ultra-detailed prompt for generating a reference image of this empty location, NO characters)"
+    }
+  ],
+  "end_card": {
+    "call_to_action": ["string (3-5 calls to action: subscribe, comment, next episode)"],
+    "teaser_next_episode": "string | null"
+  }
+}`;
+
+export async function generateScreenplay(
+  analysis: ContentAnalysis,
+  plan: SeriesPlan,
+  episodeNumber: number,
+  language: string,
+  targetDurationMinutes: number = 5,
+  previousEpisodes: PreviousEpisodeContext[] = [],
+) {
+  const episode = plan.episodes.find((e) => e.episode_number === episodeNumber);
+  if (!episode) {
+    throw new Error(`Episode ${episodeNumber} not found in series plan`);
+  }
+
+  const shotGuidance =
+    targetDurationMinutes <= 3
+      ? '30-50 shots total across all scenes (short episode, ~3 minutes). 3-5 scenes.'
+      : targetDurationMinutes <= 5
+        ? '50-80 shots total across all scenes (standard episode, ~5 minutes). 5-8 scenes.'
+        : '100-160 shots total across all scenes (long episode, ~10 minutes). 8-12 scenes.';
+
+  return callClaude<Screenplay>({
+    model: 'opus',
+    systemPrompt: SCREENPLAY_SYSTEM_PROMPT,
+    userPrompt: `Generate a complete cinematic anime screenplay for episode ${episodeNumber}.
+
+TARGET DURATION: ${targetDurationMinutes} minutes. Use ${shotGuidance}
+Language for ALL dialogue, narration, and text: ${language}
+
+Follow this JSON schema EXACTLY:
+${SCREENPLAY_SCHEMA}
+
+=== SERIES INFO ===
+${JSON.stringify(plan.series, null, 2)}
+
+=== CHARACTERS ===
+${JSON.stringify(
+  plan.characters.map((c) => ({
+    id: c.id,
+    name: c.name,
+    role: c.role,
+    personality_traits: c.personality_traits,
+    visual_description: c.visual_description,
+    narrative_function: c.narrative_function,
+    catchphrase: c.catchphrase,
+  })),
+  null,
+  2,
+)}
+
+=== EPISODE PLAN ===
+${JSON.stringify(episode, null, 2)}
+
+=== STORY ELEMENTS ===
+${JSON.stringify(
+  analysis.story_elements,
+  null,
+  2,
+)}
+
+=== WORLD-BUILDING NOTES ===
+Setting: ${plan.series.setting}
+Tone: ${plan.series.tone}
+Narrative opportunities identified: ${analysis.narrative_opportunities.join('; ')}
+
+=== CRITICAL REQUIREMENTS ===
+1. Every visual_direction MUST be a detailed, self-contained prompt (50+ words) describing the exact anime image to generate. Include art style, lighting, colors, character details, environment, mood.
+2. Characters must be described by their visual appearance in EVERY visual_direction (not just by name) — the image generator doesn't know character names.
+3. Story must engage the audience from first shot to last.
+4. Each location needs a unique reference_prompt that describes the empty environment in extreme detail for consistent visual generation.
+5. Shot IDs must follow the pattern: s{scene}_b{beat}_sh{shot} (e.g., s01_b01_sh01, s01_b01_sh02, s01_b02_sh01...)
+6. Vary shot types within each scene — don't use the same shot type consecutively unless for deliberate effect.
+7. Use silence and visual storytelling — not every shot needs dialogue.${
+      previousEpisodes.length > 0
+        ? `
+
+=== PREVIOUS EPISODES (maintain continuity) ===
+${previousEpisodes
+  .map(
+    (prev) =>
+      `Episode ${prev.episodeNumber} "${prev.title}":
+- Key points: ${prev.summaryPoints.join('; ')}
+- Story beats: ${prev.storyBeats.join(', ')}
+- Ended with: ${prev.cliffhanger ?? prev.teaserNextEpisode ?? 'No cliffhanger'}`,
+  )
+  .join('\n\n')}
+
+IMPORTANT: This is episode ${episodeNumber} of ${plan.series.total_episodes}. Build on previous episodes — don't repeat content.`
+        : ''
+    }`,
     maxTokens: 16384,
     temperature: 0.8,
   });
@@ -702,7 +1068,7 @@ interface ValidationResult {
   is_valid: boolean;
   coverage_score: number;
   issues: Array<{
-    type: 'coverage' | 'accuracy' | 'pacing' | 'dialogue' | 'engagement';
+    type: 'coverage' | 'consistency' | 'pacing' | 'dialogue' | 'engagement';
     severity: 'low' | 'medium' | 'high';
     description: string;
     suggestion: string;
@@ -711,8 +1077,8 @@ interface ValidationResult {
     total_panels: number;
     dialogue_density: number;
     emotional_variety: number;
-    concepts_covered: number;
-    concepts_expected: number;
+    story_beats_covered: number;
+    story_beats_expected: number;
   };
 }
 
@@ -726,14 +1092,14 @@ export async function validateScript(
 
   return callClaude<ValidationResult>({
     model: 'sonnet',
-    systemPrompt: `You are a quality assurance specialist for educational anime scripts.
+    systemPrompt: `You are a quality assurance specialist for anime scripts.
 Analyze scripts and identify issues. Be constructive but thorough.
 
 OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text.`,
-    userPrompt: `Validate this anime educational script:
+    userPrompt: `Validate this anime script:
 
-1. COVERAGE: Are ALL concepts from the episode plan covered? List missing ones.
-2. ACCURACY: Any factually incorrect statements or misleading simplifications?
+1. COVERAGE: Are all story beats from the episode plan present?
+2. CONSISTENCY: Any plot holes or character inconsistencies?
 3. PACING: Are there 3+ consecutive panels of the same type?
 4. DIALOGUE: Any dialogue exceeding 15 words per line?
 5. ENGAGEMENT: Is there a hook in the first 2 panels? A memorable ending?
@@ -742,8 +1108,8 @@ JSON schema:
 {
   "is_valid": boolean,
   "coverage_score": number 0-100,
-  "issues": [{ "type": "coverage|accuracy|pacing|dialogue|engagement", "severity": "low|medium|high", "description": "string", "suggestion": "string" }],
-  "metrics": { "total_panels": number, "dialogue_density": number, "emotional_variety": number, "concepts_covered": number, "concepts_expected": number }
+  "issues": [{ "type": "coverage|consistency|pacing|dialogue|engagement", "severity": "low|medium|high", "description": "string", "suggestion": "string" }],
+  "metrics": { "total_panels": number, "dialogue_density": number, "emotional_variety": number, "story_beats_covered": number, "story_beats_expected": number }
 }
 
 EPISODE PLAN:
@@ -752,12 +1118,8 @@ ${JSON.stringify(episode, null, 2)}
 SCRIPT:
 ${JSON.stringify(script, null, 2)}
 
-EXPECTED CONCEPTS:
-${JSON.stringify(
-  analysis.concepts.filter((c) => episode?.concepts_covered.includes(c.id)),
-  null,
-  2,
-)}`,
+EXPECTED STORY BEATS:
+${JSON.stringify(episode?.story_beats, null, 2)}`,
     maxTokens: 4096,
     temperature: 0.3,
   });
@@ -883,214 +1245,224 @@ ${JSON.stringify(script, null, 2)}`,
 }
 
 // ============================================================
-// PHASE 6: QUIZ GENERATION
+// PHASE 5B: AUDIO DIRECTION V2 (shot-based)
 // ============================================================
 
-const QUIZ_SYSTEM_PROMPT = `You are an expert educational assessment designer. Generate quiz questions that test genuine comprehension — not just memorization.
-
-RULES:
-- Create a mix of multiple_choice and true_false questions
-- Multiple choice: exactly 4 options, one correct
-- Use common misconceptions as plausible wrong answers
-- Explanations should teach, not just state the answer
-- Questions should progress from easy to hard
-- Test recall, comprehension, AND application
-- Write in the same language as the episode content
-
-OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
-
-const QUIZ_SCHEMA = `{
-  "questions": [
+export interface AudioDirectionV2 {
+  episode_number: number;
+  voice_assignments: Record<
+    string,
     {
-      "id": "q_001",
-      "type": "multiple_choice | true_false",
-      "question": "string",
-      "options": ["string", "string", "string", "string"],
-      "correct_answer": 0,
-      "explanation": "string (2-3 sentences explaining why)",
-      "difficulty": "easy | medium | hard",
-      "concept_tested": "string (concept name)"
+      voice_type: string;
+      base_settings: {
+        stability: number;
+        similarity_boost: number;
+        style: number;
+      };
     }
-  ],
-  "passing_score": 60,
-  "total_points": number
-}`;
-
-export async function generateQuiz(
-  script: EpisodeScript,
-  analysis: ContentAnalysis,
-  episodeNumber: number,
-  language: string,
-) {
-  const episodeConcepts = analysis.concepts.map((c) => ({
-    name: c.name,
-    key_facts: c.key_facts,
-    misconceptions: c.common_misconceptions,
-  }));
-
-  return callClaude<QuizData>({
-    model: 'sonnet',
-    systemPrompt: QUIZ_SYSTEM_PROMPT,
-    userPrompt: `Generate 5-7 quiz questions for Episode ${episodeNumber} based on the following.
-
-Language: ${language}
-
-EPISODE SUMMARY POINTS:
-${JSON.stringify(script.end_card.summary_points)}
-
-CONCEPTS COVERED:
-${JSON.stringify(episodeConcepts, null, 2)}
-
-KEY EDUCATIONAL NOTES FROM PANELS:
-${script.scenes
-  .flatMap((s) => s.panels.map((p) => p.educational_note))
-  .filter(Boolean)
-  .join('\n- ')}
-
-Follow this schema:
-${QUIZ_SCHEMA}`,
-    maxTokens: 4096,
-    temperature: 0.5,
-  });
+  >;
+  audio_timeline: Array<{
+    shot_id: string;
+    dialogue: Array<{
+      character_id: string;
+      character_name: string;
+      text: string;
+      delivery: string;
+      pause_after_ms: number;
+    }>;
+    narration: {
+      text: string | null;
+      speed: number;
+    };
+    sfx: {
+      description: string | null;
+      timing: 'start' | 'middle' | 'end';
+      volume: number;
+    };
+    music: {
+      action: 'continue' | 'swell' | 'drop' | 'change' | 'silence';
+      new_track_prompt: string | null;
+      volume: number;
+    };
+  }>;
+  music_tracks: Array<{
+    track_id: string;
+    prompt: string;
+    mood: string;
+    duration_seconds: number;
+    loop: boolean;
+  }>;
 }
 
-// ============================================================
-// PHASE 7: STUDY NOTES GENERATION
-// ============================================================
-
-const STUDY_NOTES_SYSTEM_PROMPT = `You are an expert study guide creator. Generate concise, well-structured study notes that help students review and retain what they learned.
+const AUDIO_DIRECTION_V2_SYSTEM = `You are an anime sound director. Convert a cinematic screenplay into technical audio specifications
+for TTS (ElevenLabs) and generative music.
 
 RULES:
-- Write clear, student-friendly definitions
-- Highlight why each concept matters
-- Include self-test review questions (open-ended, no answers)
-- If there's a next episode, connect concepts forward
-- Write in the same language as the episode content
+1. Each character maintains the same voice throughout the series
+2. The "delivery" field from the screenplay is CRITICAL — copy it exactly to guide voice acting
+3. Music reinforces emotion: "swell" for climax, "drop" for tension release, "silence" for impact
+4. Sound effects are cinematic — support the visual storytelling
+5. Silence between shots is natural — not every shot needs audio
+6. Narration should be rare and purposeful — prefer dialogue and visuals
+7. Index everything by shot_id (not panel_id)
 
-OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
+OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text.`;
 
-const STUDY_NOTES_SCHEMA = `{
-  "title": "string (episode title)",
-  "summary": "string (2-3 paragraph summary of the episode)",
-  "key_concepts": [
+const AUDIO_DIRECTION_V2_SCHEMA = `{
+  "episode_number": number,
+  "voice_assignments": {
+    "char_001": {
+      "voice_type": "string (young enthusiastic / wise calm / cold arrogant / etc)",
+      "base_settings": { "stability": 0.5, "similarity_boost": 0.75, "style": 0.6 }
+    }
+  },
+  "audio_timeline": [
     {
-      "name": "string",
-      "definition": "string (clear, concise definition)",
-      "importance": "string (why this matters)"
+      "shot_id": "s01_b01_sh01",
+      "dialogue": [
+        {
+          "character_id": "char_001",
+          "character_name": "Riko",
+          "text": "exact text to synthesize",
+          "delivery": "whispered with wide eyes",
+          "pause_after_ms": 500
+        }
+      ],
+      "narration": { "text": "string | null", "speed": 1.0 },
+      "sfx": { "description": "string | null", "timing": "start | middle | end", "volume": 0.7 },
+      "music": { "action": "continue | swell | drop | change | silence", "new_track_prompt": "string | null", "volume": 0.3 }
     }
   ],
-  "key_takeaways": ["string (actionable insight)"],
-  "review_questions": ["string (open-ended question for self-study)"],
-  "connections_to_next": "string | null"
+  "music_tracks": [
+    { "track_id": "bgm_001", "prompt": "string for music generation", "mood": "string", "duration_seconds": number, "loop": boolean }
+  ]
 }`;
 
-export async function generateStudyNotes(
-  script: EpisodeScript,
-  analysis: ContentAnalysis,
+export async function generateAudioDirectionV2(
+  screenplay: Screenplay,
+  plan: SeriesPlan,
   episodeNumber: number,
-  teaserNext: string | null,
   language: string,
 ) {
-  return callClaude<StudyNotes>({
+  // Flatten all shots from the screenplay for the audio timeline
+  const allShots = screenplay.acts.flatMap((act) =>
+    act.scenes.flatMap((scene) =>
+      scene.beats.flatMap((beat) =>
+        beat.shots.map((shot) => ({
+          shot_id: shot.shot_id,
+          shot_type: shot.shot_type,
+          dialogue: shot.dialogue,
+          narration: shot.narration,
+          sfx_cue: shot.sfx_cue,
+          music_cue: shot.music_cue,
+          scene_mood: scene.mood,
+        })),
+      ),
+    ),
+  );
+
+  return callClaude<AudioDirectionV2>({
     model: 'sonnet',
-    systemPrompt: STUDY_NOTES_SYSTEM_PROMPT,
-    userPrompt: `Generate study notes for Episode ${episodeNumber}: "${script.episode.title}"
+    systemPrompt: AUDIO_DIRECTION_V2_SYSTEM,
+    userPrompt: `Generate audio direction for episode ${episodeNumber} (shot-based screenplay).
 
 Language: ${language}
 
-EPISODE SUMMARY POINTS:
-${JSON.stringify(script.end_card.summary_points)}
+Follow this JSON schema:
+${AUDIO_DIRECTION_V2_SCHEMA}
 
-CONCEPTS COVERED:
+CHARACTERS:
 ${JSON.stringify(
-  analysis.concepts.map((c) => ({
+  plan.characters.map((c) => ({
+    id: c.id,
     name: c.name,
-    description: c.description,
-    key_facts: c.key_facts,
-    analogy: c.real_world_analogy,
+    role: c.role,
+    voice_type: c.voice_type,
   })),
   null,
   2,
 )}
 
-EDUCATIONAL NOTES:
-${script.scenes
-  .flatMap((s) => s.panels.map((p) => p.educational_note))
-  .filter(Boolean)
-  .join('\n- ')}
-
-TEASER FOR NEXT EPISODE: ${teaserNext ?? 'None (final episode)'}
-
-Follow this schema:
-${STUDY_NOTES_SCHEMA}`,
-    maxTokens: 4096,
+ALL SHOTS (with dialogue and cues from screenplay):
+${JSON.stringify(allShots, null, 2)}`,
+    maxTokens: 16384,
     temperature: 0.5,
   });
 }
 
 // ============================================================
-// PHASE 7B: FLASHCARD GENERATION
+// YOUTUBE METADATA GENERATION
 // ============================================================
 
-const FLASHCARD_SYSTEM_PROMPT = `You are an expert flashcard creator specializing in active recall. Generate flashcards that test understanding, not just memorization.
+export interface YouTubeMetadata {
+  title: string;
+  description: string;
+  tags: string[];
+  chapters: Array<{ time: string; label: string }>;
+  thumbnail_prompt: string;
+  shorts_hook: string;
+}
+
+const YOUTUBE_METADATA_SYSTEM = `You are a YouTube SEO and content optimization expert specializing in anime content. Generate metadata that maximizes click-through rate and discoverability.
 
 RULES:
-- Each card should test ONE concept clearly
-- Front: a specific question, prompt, or fill-in-the-blank
-- Back: a concise, complete answer
-- Include a mix of categories: definitions, concepts, applications, comparisons
-- Use the same language as the episode content
-- Assign each card a unique id like "fc_01", "fc_02", etc.
-- Generate 8-12 cards per episode
+- Title: catchy, under 60 characters, includes relevant keywords
+- Description: engaging first 2 lines (shown in search), then full episode details with timestamps
+- Tags: 10-15 relevant tags mixing broad ("anime") and specific ("anime action short")
+- Chapters: based on the episode's scene structure
+- Thumbnail prompt: describe a dramatic, eye-catching anime frame that would make someone click
+- Shorts hook: the most dramatic 60-second segment described for vertical format
 
 OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
 
-const FLASHCARD_SCHEMA = `{
-  "cards": [
-    {
-      "id": "fc_01",
-      "front": "string (question or prompt)",
-      "back": "string (concise answer)",
-      "category": "definition | concept | application | comparison"
-    }
-  ]
+const YOUTUBE_METADATA_SCHEMA = `{
+  "title": "string (under 60 chars, catchy, keyword-rich)",
+  "description": "string (full YouTube description with timestamps)",
+  "tags": ["string"],
+  "chapters": [
+    { "time": "0:00", "label": "string" }
+  ],
+  "thumbnail_prompt": "string (detailed prompt for generating an eye-catching anime thumbnail at 1280x720)",
+  "shorts_hook": "string (describe the most dramatic 60s segment for YouTube Shorts)"
 }`;
 
-export async function generateFlashcards(
-  script: EpisodeScript,
-  analysis: ContentAnalysis,
-  episodeNumber: number,
+export async function generateYouTubeMetadata(
+  screenplay: Screenplay,
+  episodeTitle: string,
+  seriesTitle: string,
   language: string,
 ) {
-  const episodeConcepts = analysis.concepts.map((c) => ({
-    name: c.name,
-    description: c.description,
-    key_facts: c.key_facts,
-    analogy: c.real_world_analogy,
-  }));
-
-  return callClaude<FlashcardDeck>({
+  return callClaude<YouTubeMetadata>({
     model: 'sonnet',
-    systemPrompt: FLASHCARD_SYSTEM_PROMPT,
-    userPrompt: `Generate flashcards for Episode ${episodeNumber}: "${script.episode.title}"
+    systemPrompt: YOUTUBE_METADATA_SYSTEM,
+    userPrompt: `Generate YouTube metadata for this anime episode.
 
+Series: ${seriesTitle}
+Episode: ${episodeTitle}
 Language: ${language}
 
-EPISODE SUMMARY POINTS:
-${JSON.stringify(script.end_card.summary_points)}
-
-CONCEPTS COVERED:
-${JSON.stringify(episodeConcepts, null, 2)}
-
-EDUCATIONAL NOTES:
-${script.scenes
-  .flatMap((s) => s.panels.map((p) => p.educational_note))
-  .filter(Boolean)
-  .join('\n- ')}
-
 Follow this schema:
-${FLASHCARD_SCHEMA}`,
+${YOUTUBE_METADATA_SCHEMA}
+
+SCREENPLAY SUMMARY:
+${JSON.stringify(
+  {
+    episode: screenplay.episode,
+    scenes: screenplay.acts.flatMap((act) =>
+      act.scenes.map((s) => ({
+        scene_id: s.scene_id,
+        location: s.location_id,
+        mood: s.mood,
+        narrative_function: s.narrative_function,
+        shot_count: s.beats.reduce((sum, b) => sum + b.shots.length, 0),
+      })),
+    ),
+    end_card: screenplay.end_card,
+  },
+  null,
+  2,
+)}`,
     maxTokens: 4096,
-    temperature: 0.5,
+    temperature: 0.6,
   });
 }

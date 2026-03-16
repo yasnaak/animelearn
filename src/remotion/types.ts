@@ -55,3 +55,65 @@ export interface EpisodeCompositionProps {
   width: number;
   height: number;
 }
+
+// ============================================================
+// SHOT-BASED TYPES (v2 pipeline — cinematic anime production)
+// ============================================================
+
+export interface ShotData {
+  shotId: string;
+  shotType: string;
+  videoUrl: string;
+  fallbackImageUrl: string;
+  durationFrames: number;
+  camera: {
+    movement: string;
+    intensity: number;
+  };
+  dialogue: Array<{
+    characterId: string;
+    characterName: string;
+    text: string;
+    audioUrl: string;
+    durationMs: number;
+    delivery: string;
+  }>;
+  narration: {
+    text: string;
+    audioUrl: string;
+    durationMs: number;
+  } | null;
+  sfx: {
+    audioUrl: string;
+    timing: 'start' | 'middle' | 'end';
+    volume: number;
+  } | null;
+  transition: 'cut' | 'crossfade' | 'fade_black' | 'fade_white' | 'whip_pan' | 'match_cut' | 'smash_cut' | 'dissolve';
+}
+
+export interface SceneDataV2 {
+  sceneId: string;
+  mood: string;
+  shots: ShotData[];
+  musicTrack: {
+    audioUrl: string;
+    volume: number;
+    loop: boolean;
+  } | null;
+  transitionOut: 'cut' | 'fade_black' | 'fade_white' | 'dissolve' | 'whip_pan' | 'match_cut' | 'smash_cut';
+}
+
+export interface EpisodeCompositionPropsV2 {
+  title: string;
+  episodeNumber: number;
+  seriesTitle: string;
+  coldOpen: string | null;
+  scenes: SceneDataV2[];
+  endCard: {
+    summaryPoints: string[];
+    teaserNextEpisode: string | null;
+  };
+  fps: number;
+  width: number;
+  height: number;
+}

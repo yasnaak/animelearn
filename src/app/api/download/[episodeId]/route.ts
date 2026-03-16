@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
-import { episodes, projects, panels, audioTracks } from '@/server/db/schema';
+import {
+  episodes,
+  projects,
+  panels,
+  audioTracks,
+  shots,
+} from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { assembleEpisodeProps } from '@/server/services/render';
+import {
+  assembleEpisodeProps,
+  assembleEpisodePropsV2,
+} from '@/server/services/render';
 import { renderEpisodeMp4 } from '@/server/services/remotion-render';
 import type {
   EpisodeScript,
   AudioDirection,
+  AudioDirectionV2,
+  Screenplay,
   SeriesPlan,
 } from '@/server/services/ai-pipeline';
 import { readFile, unlink } from 'fs/promises';
@@ -48,14 +59,22 @@ export async function GET(
     return NextResponse.redirect(ep.videoUrl);
   }
 
-  if (!ep.script || !ep.audioDirection) {
+  const isV2 = !!(ep.screenplay as unknown as Screenplay | null)?.acts?.length;
+
+  if (!isV2 && (!ep.script || !ep.audioDirection)) {
+    return NextResponse.json(
+      { error: 'Episode data incomplete' },
+      { status: 422 },
+    );
+  }
+  if (isV2 && !ep.audioDirection) {
     return NextResponse.json(
       { error: 'Episode data incomplete' },
       { status: 422 },
     );
   }
 
-  // Load project + assets
+  // Load project
   const project = (
     await db
       .select()
@@ -71,46 +90,80 @@ export async function GET(
     );
   }
 
-  const panelRecords = await db
-    .select()
-    .from(panels)
-    .where(eq(panels.episodeId, episodeId))
-    .orderBy(panels.panelOrder);
+  const plan = project.seriesPlan as unknown as SeriesPlan;
 
   const audioTrackRecords = await db
     .select()
     .from(audioTracks)
     .where(eq(audioTracks.episodeId, episodeId));
 
-  const plan = project.seriesPlan as unknown as SeriesPlan;
+  let props;
 
-  const props = assembleEpisodeProps({
-    episodeNumber: ep.episodeNumber,
-    episodeTitle: ep.title,
-    seriesTitle: plan.series.title,
-    script: ep.script as unknown as EpisodeScript,
-    audioDirection: ep.audioDirection as unknown as AudioDirection,
-    panelRecords: panelRecords.map((pr) => ({
-      panelId: pr.panelId,
-      backgroundImageUrl: pr.backgroundImageUrl,
-      characterLayerUrl: pr.characterLayerUrl,
-      effectLayerUrl: pr.effectLayerUrl,
-      videoUrl: pr.videoUrl,
-      metadata: pr.metadata,
-    })),
-    audioTrackRecords: audioTrackRecords.map((at) => ({
-      trackType: at.trackType,
-      audioUrl: at.audioUrl,
-      durationMs: at.durationMs,
-      panelId: at.panelId,
-      metadata: at.metadata,
-    })),
-  });
+  if (isV2) {
+    const shotRecords = await db
+      .select()
+      .from(shots)
+      .where(eq(shots.episodeId, episodeId))
+      .orderBy(shots.shotOrder);
+
+    props = assembleEpisodePropsV2({
+      episodeNumber: ep.episodeNumber,
+      episodeTitle: ep.title,
+      seriesTitle: plan.series.title,
+      screenplay: ep.screenplay as unknown as Screenplay,
+      audioDirection: ep.audioDirection as unknown as AudioDirectionV2,
+      shotRecords: shotRecords.map((sr) => ({
+        shotId: sr.shotId,
+        sceneId: sr.sceneId,
+        shotType: sr.shotType,
+        referenceImageUrl: sr.referenceImageUrl,
+        videoUrl: sr.videoUrl,
+        durationSeconds: sr.durationSeconds,
+        metadata: sr.metadata,
+      })),
+      audioTrackRecords: audioTrackRecords.map((at) => ({
+        trackType: at.trackType,
+        audioUrl: at.audioUrl,
+        durationMs: at.durationMs,
+        shotId: at.shotId,
+        metadata: at.metadata,
+      })),
+    });
+  } else {
+    const panelRecords = await db
+      .select()
+      .from(panels)
+      .where(eq(panels.episodeId, episodeId))
+      .orderBy(panels.panelOrder);
+
+    props = assembleEpisodeProps({
+      episodeNumber: ep.episodeNumber,
+      episodeTitle: ep.title,
+      seriesTitle: plan.series.title,
+      script: ep.script as unknown as EpisodeScript,
+      audioDirection: ep.audioDirection as unknown as AudioDirection,
+      panelRecords: panelRecords.map((pr) => ({
+        panelId: pr.panelId,
+        backgroundImageUrl: pr.backgroundImageUrl,
+        characterLayerUrl: pr.characterLayerUrl,
+        effectLayerUrl: pr.effectLayerUrl,
+        videoUrl: pr.videoUrl,
+        metadata: pr.metadata,
+      })),
+      audioTrackRecords: audioTrackRecords.map((at) => ({
+        trackType: at.trackType,
+        audioUrl: at.audioUrl,
+        durationMs: at.durationMs,
+        panelId: at.panelId,
+        metadata: at.metadata,
+      })),
+    });
+  }
 
   // Render to temp file
   const outputPath = path.join(
     os.tmpdir(),
-    `animelearn-${episodeId}-${Date.now()}.mp4`,
+    `animeforge-${episodeId}-${Date.now()}.mp4`,
   );
 
   try {

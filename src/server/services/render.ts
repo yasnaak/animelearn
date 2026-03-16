@@ -1,9 +1,18 @@
 import type {
   EpisodeCompositionProps,
+  EpisodeCompositionPropsV2,
   PanelData,
   SceneData,
+  SceneDataV2,
+  ShotData,
 } from '@/remotion/types';
-import type { EpisodeScript, AudioDirection, SeriesPlan } from './ai-pipeline';
+import type {
+  EpisodeScript,
+  AudioDirection,
+  AudioDirectionV2,
+  Screenplay,
+  SeriesPlan,
+} from './ai-pipeline';
 
 const FPS = 30;
 const DEFAULT_PANEL_DURATION_SECONDS = 3.5;
@@ -199,8 +208,213 @@ export function assembleEpisodeProps(params: {
     seriesTitle,
     scenes,
     endCard: {
-      summaryPoints: script.end_card.summary_points,
+      summaryPoints: script.end_card.call_to_action,
       teaserNextEpisode: script.end_card.teaser_next_episode,
+    },
+    fps: FPS,
+    width: 1920,
+    height: 1080,
+  };
+}
+
+// ============================================================
+// V2: SHOT-BASED ASSEMBLY
+// ============================================================
+
+interface ShotRecord {
+  shotId: string;
+  sceneId: string;
+  shotType: string;
+  referenceImageUrl: string | null;
+  videoUrl: string | null;
+  durationSeconds: number;
+  metadata: unknown;
+}
+
+interface AudioTrackRecordV2 {
+  trackType: string;
+  audioUrl: string;
+  durationMs: number;
+  shotId: string | null;
+  metadata: unknown;
+}
+
+/**
+ * Assembles shot-based episode data into V2 Remotion composition props
+ */
+export function assembleEpisodePropsV2(params: {
+  episodeNumber: number;
+  episodeTitle: string;
+  seriesTitle: string;
+  screenplay: Screenplay;
+  audioDirection: AudioDirectionV2;
+  shotRecords: ShotRecord[];
+  audioTrackRecords: AudioTrackRecordV2[];
+}): EpisodeCompositionPropsV2 {
+  const {
+    episodeNumber,
+    episodeTitle,
+    seriesTitle,
+    screenplay,
+    audioDirection,
+    shotRecords,
+    audioTrackRecords,
+  } = params;
+
+  // Index shots and audio by shotId
+  const shotMap = new Map(shotRecords.map((s) => [s.shotId, s]));
+  const audioByShot = new Map<string, AudioTrackRecordV2[]>();
+  const musicTracks: AudioTrackRecordV2[] = [];
+
+  for (const track of audioTrackRecords) {
+    if (track.trackType === 'music') {
+      musicTracks.push(track);
+    } else if (track.shotId) {
+      const existing = audioByShot.get(track.shotId) ?? [];
+      existing.push(track);
+      audioByShot.set(track.shotId, existing);
+    }
+  }
+
+  // Map audio direction entries by shot_id
+  const directionMap = new Map(
+    audioDirection.audio_timeline.map((entry) => [entry.shot_id, entry]),
+  );
+
+  let musicTrackIdx = 0;
+
+  // Build scenes from screenplay acts → scenes
+  const scenes: SceneDataV2[] = screenplay.acts.flatMap((act) =>
+    act.scenes.map((screenplayScene) => {
+      // Flatten beats → shots
+      const shots: ShotData[] = screenplayScene.beats.flatMap((beat) =>
+        beat.shots.map((screenplayShot) => {
+          const shotRecord = shotMap.get(screenplayShot.shot_id);
+          const shotAudio =
+            audioByShot.get(screenplayShot.shot_id) ?? [];
+
+          const dialogueTracks = shotAudio.filter(
+            (t) => t.trackType === 'dialogue',
+          );
+          const narrationTrack = shotAudio.find(
+            (t) => t.trackType === 'narration',
+          );
+          const sfxTrack = shotAudio.find((t) => t.trackType === 'sfx');
+
+          // Duration: use screenplay's duration_seconds, min 3s
+          const durationSeconds = shotRecord?.durationSeconds ?? screenplayShot.duration_seconds;
+          const totalDialogueMs = dialogueTracks.reduce(
+            (sum, t) => sum + t.durationMs,
+            0,
+          );
+          const narrationMs = narrationTrack?.durationMs ?? 0;
+          const audioDurationMs = Math.max(totalDialogueMs, narrationMs) + 500;
+          const visualDurationMs = durationSeconds * 1000;
+          const durationFrames = Math.ceil(
+            (Math.max(audioDurationMs, visualDurationMs) / 1000) * FPS,
+          );
+
+          const shot: ShotData = {
+            shotId: screenplayShot.shot_id,
+            shotType: screenplayShot.shot_type,
+            videoUrl: shotRecord?.videoUrl ?? '',
+            fallbackImageUrl:
+              shotRecord?.referenceImageUrl ?? '/placeholder-bg.png',
+            durationFrames,
+            camera: {
+              movement: screenplayShot.camera.movement,
+              intensity: 1,
+            },
+            dialogue: dialogueTracks.map((track) => {
+              const meta = track.metadata as Record<string, unknown> | null;
+              const direction = directionMap.get(screenplayShot.shot_id);
+              const dirDialogue = direction?.dialogue.find(
+                (d) =>
+                  d.character_id ===
+                  (meta?.characterId as string),
+              );
+
+              return {
+                characterId: (meta?.characterId as string) ?? '',
+                characterName: (meta?.characterName as string) ?? dirDialogue?.character_name ?? '',
+                text: (meta?.text as string) ?? '',
+                audioUrl: track.audioUrl,
+                durationMs: track.durationMs,
+                delivery: dirDialogue?.delivery ?? 'calm',
+              };
+            }),
+            narration: narrationTrack
+              ? {
+                  text:
+                    ((narrationTrack.metadata as Record<string, unknown> | null)
+                      ?.text as string) ?? '',
+                  audioUrl: narrationTrack.audioUrl,
+                  durationMs: narrationTrack.durationMs,
+                }
+              : null,
+            sfx: sfxTrack
+              ? {
+                  audioUrl: sfxTrack.audioUrl,
+                  timing:
+                    ((sfxTrack.metadata as Record<string, unknown> | null)
+                      ?.timing as 'start' | 'middle' | 'end') ?? 'start',
+                  volume:
+                    ((sfxTrack.metadata as Record<string, unknown> | null)
+                      ?.volume as number) ?? 0.7,
+                }
+              : null,
+            transition: screenplayShot.transition as ShotData['transition'],
+          };
+
+          return shot;
+        }),
+      );
+
+      // Check if this scene needs a music change
+      const firstShotDirection = directionMap.get(
+        screenplayScene.beats[0]?.shots[0]?.shot_id ?? '',
+      );
+      let sceneMusicTrack: SceneDataV2['musicTrack'] = null;
+
+      if (
+        firstShotDirection?.music.action === 'change' &&
+        musicTracks[musicTrackIdx]
+      ) {
+        sceneMusicTrack = {
+          audioUrl: musicTracks[musicTrackIdx].audioUrl,
+          volume: firstShotDirection.music.volume ?? 0.3,
+          loop: true,
+        };
+        musicTrackIdx++;
+      } else if (musicTrackIdx === 0 && musicTracks[0]) {
+        // First scene gets the first music track
+        sceneMusicTrack = {
+          audioUrl: musicTracks[0].audioUrl,
+          volume: 0.3,
+          loop: true,
+        };
+        musicTrackIdx = 1;
+      }
+
+      return {
+        sceneId: screenplayScene.scene_id,
+        mood: screenplayScene.mood,
+        shots,
+        musicTrack: sceneMusicTrack,
+        transitionOut: screenplayScene.transition_out as SceneDataV2['transitionOut'],
+      };
+    }),
+  );
+
+  return {
+    title: episodeTitle,
+    episodeNumber,
+    seriesTitle,
+    coldOpen: screenplay.episode.cold_open,
+    scenes,
+    endCard: {
+      summaryPoints: screenplay.end_card.call_to_action,
+      teaserNextEpisode: screenplay.end_card.teaser_next_episode,
     },
     fps: FPS,
     width: 1920,

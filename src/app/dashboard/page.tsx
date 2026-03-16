@@ -16,13 +16,13 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Projects</h2>
           <p className="text-muted-foreground">
-            Transform your content into anime episodes
+            Your anime projects
           </p>
         </div>
         <Button asChild>
           <Link href="/dashboard/projects/new">
             <Plus className="mr-2 h-4 w-4" />
-            New Project
+            Create Anime
           </Link>
         </Button>
       </div>
@@ -52,7 +52,7 @@ export default function DashboardPage() {
                     <Badge variant="secondary">{project.status}</Badge>
                   </div>
                   <CardDescription>
-                    {project.sourceType === 'pdf' ? 'PDF' : 'YouTube'} &middot;{' '}
+                    {{ pdf: 'PDF', youtube: 'YouTube', idea: 'Idea', text: 'Script', url: 'URL' }[project.sourceType] ?? project.sourceType} &middot;{' '}
                     {project.style.replace('_', ' ')}
                   </CardDescription>
                 </CardHeader>
@@ -73,7 +73,7 @@ export default function DashboardPage() {
             <FolderOpen className="h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No projects yet</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Upload a PDF or paste a YouTube URL to get started
+              Describe an idea, paste a script, or import from any source
             </p>
             <Button asChild className="mt-4">
               <Link href="/dashboard/projects/new">

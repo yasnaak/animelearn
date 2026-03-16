@@ -6,6 +6,7 @@ import { trpc } from '@/lib/trpc/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Card,
   CardContent,
@@ -21,18 +22,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, FileText, Youtube, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Youtube, Loader2, CheckCircle2, AlertCircle, Sparkles, PenLine, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 type UploadState = 'idle' | 'uploading' | 'extracting' | 'done' | 'error';
+type SourceType = 'idea' | 'text' | 'pdf' | 'youtube' | 'url';
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const [sourceType, setSourceType] = useState<'pdf' | 'youtube'>('pdf');
+  const [sourceType, setSourceType] = useState<SourceType>('idea');
   const [title, setTitle] = useState('');
   const [style, setStyle] = useState('clean_modern');
   const [language, setLanguage] = useState('en');
   const [duration, setDuration] = useState('5');
+
+  // Idea state
+  const [ideaText, setIdeaText] = useState('');
+
+  // Script state
+  const [scriptText, setScriptText] = useState('');
 
   // PDF state
   const [file, setFile] = useState<File | null>(null);
@@ -46,6 +54,9 @@ export default function NewProjectPage() {
 
   // YouTube state
   const [youtubeUrl, setYoutubeUrl] = useState('');
+
+  // URL state
+  const [webUrl, setWebUrl] = useState('');
 
   const createProject = trpc.project.create.useMutation();
   const extractYoutube = trpc.project.extractYoutube.useMutation();
@@ -81,11 +92,19 @@ export default function NewProjectPage() {
       return;
     }
 
+    // Validate per source type
+    if (sourceType === 'idea' && ideaText.trim().length < 20) {
+      toast.error('Please describe your idea in at least 20 characters');
+      return;
+    }
+    if (sourceType === 'text' && scriptText.trim().length < 50) {
+      toast.error('Please enter a longer script (at least 50 characters)');
+      return;
+    }
     if (sourceType === 'pdf' && !file) {
       toast.error('Please select a PDF file');
       return;
     }
-
     if (sourceType === 'youtube') {
       const url = youtubeUrl.trim();
       if (!url) {
@@ -98,13 +117,27 @@ export default function NewProjectPage() {
         return;
       }
     }
+    if (sourceType === 'url' && !webUrl.trim()) {
+      toast.error('Please enter a URL');
+      return;
+    }
 
     try {
-      // 1. Create the project
+      const rawContent =
+        sourceType === 'idea' ? ideaText.trim() :
+        sourceType === 'text' ? scriptText.trim() :
+        undefined;
+
+      const sourceUrl =
+        sourceType === 'youtube' ? youtubeUrl.trim() :
+        sourceType === 'url' ? webUrl.trim() :
+        undefined;
+
       const project = await createProject.mutateAsync({
         title: title.trim(),
         sourceType,
-        sourceUrl: sourceType === 'youtube' ? youtubeUrl.trim() : undefined,
+        sourceUrl,
+        rawContent,
         style: style as 'clean_modern' | 'soft_pastel' | 'dark_dramatic' | 'retro_classic',
         language,
         targetDurationMinutes: parseInt(duration, 10),
@@ -115,14 +148,12 @@ export default function NewProjectPage() {
         return;
       }
 
-      // 2. Upload PDF or extract YouTube transcript
+      // Upload PDF or extract YouTube transcript
       if (sourceType === 'pdf' && file) {
         setUploadState('uploading');
-
         const formData = new FormData();
         formData.append('file', file);
         formData.append('projectId', project.id);
-
         setUploadState('extracting');
 
         const res = await fetch('/api/upload', {
@@ -143,12 +174,10 @@ export default function NewProjectPage() {
         );
       } else if (sourceType === 'youtube' && youtubeUrl.trim()) {
         setUploadState('extracting');
-
         const result = await extractYoutube.mutateAsync({
           projectId: project.id,
           url: youtubeUrl.trim(),
         });
-
         setUploadState('done');
         const minutes = Math.round(result.durationSeconds / 60);
         toast.success(
@@ -156,7 +185,6 @@ export default function NewProjectPage() {
         );
       }
 
-      // 3. Navigate to project
       router.push(`/dashboard/projects/${project.id}`);
     } catch (error) {
       setUploadState('error');
@@ -166,12 +194,14 @@ export default function NewProjectPage() {
     }
   };
 
+  const isSubmitting = createProject.isPending || extractYoutube.isPending || uploadState === 'uploading' || uploadState === 'extracting';
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">New Project</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Create Anime</h2>
         <p className="text-muted-foreground">
-          Upload a PDF or paste a YouTube URL to create anime episodes
+          Turn an idea, script, or any content into a full anime series
         </p>
       </div>
 
@@ -187,7 +217,7 @@ export default function NewProjectPage() {
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="My Awesome Course"
+                placeholder="My Anime Episode"
                 required
               />
             </div>
@@ -243,25 +273,89 @@ export default function NewProjectPage() {
           <CardHeader>
             <CardTitle>Content Source</CardTitle>
             <CardDescription>
-              Upload a PDF or paste a YouTube URL
+              Describe an idea, paste your own script, or import from a URL
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs
               value={sourceType}
-              onValueChange={(v) => setSourceType(v as 'pdf' | 'youtube')}
+              onValueChange={(v) => setSourceType(v as SourceType)}
             >
               <TabsList className="w-full">
-                <TabsTrigger value="pdf" className="flex-1">
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF Upload
+                <TabsTrigger value="idea" className="flex-1">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Idea
+                </TabsTrigger>
+                <TabsTrigger value="text" className="flex-1">
+                  <PenLine className="mr-2 h-4 w-4" />
+                  Script
                 </TabsTrigger>
                 <TabsTrigger value="youtube" className="flex-1">
                   <Youtube className="mr-2 h-4 w-4" />
-                  YouTube URL
+                  YouTube
+                </TabsTrigger>
+                <TabsTrigger value="pdf" className="flex-1">
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </TabsTrigger>
+                <TabsTrigger value="url" className="flex-1">
+                  <Globe className="mr-2 h-4 w-4" />
+                  URL
                 </TabsTrigger>
               </TabsList>
 
+              {/* Idea Tab */}
+              <TabsContent value="idea" className="mt-4 space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="idea">Describe your anime story</Label>
+                  <Textarea
+                    id="idea"
+                    value={ideaText}
+                    onChange={(e) => setIdeaText(e.target.value)}
+                    placeholder="A samurai who discovers modern-day Tokyo through a time portal. He must learn to navigate the city while being hunted by a secret organization that knows about the portal..."
+                    rows={5}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Describe the story, characters, setting, and tone. The more detail, the better the result.
+                  </p>
+                </div>
+              </TabsContent>
+
+              {/* Script Tab */}
+              <TabsContent value="text" className="mt-4 space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="script">Paste your script or story</Label>
+                  <Textarea
+                    id="script"
+                    value={scriptText}
+                    onChange={(e) => setScriptText(e.target.value)}
+                    placeholder="INT. ABANDONED WAREHOUSE - NIGHT&#10;&#10;YUKI (17, silver hair, determined eyes) stands alone in the center of the room. The moonlight casts long shadows through broken windows.&#10;&#10;YUKI: (whispering) They said no one comes back from the Shadow Realm. They were wrong."
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Paste a full script, story outline, or narrative. AI will turn it into an anime series.
+                  </p>
+                </div>
+              </TabsContent>
+
+              {/* YouTube Tab */}
+              <TabsContent value="youtube" className="mt-4 space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="youtube-url">YouTube URL</Label>
+                  <Input
+                    id="youtube-url"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  We extract the transcript and turn it into an anime series. The video must have captions.
+                </p>
+              </TabsContent>
+
+              {/* PDF Tab */}
               <TabsContent value="pdf" className="mt-4">
                 <div
                   onDragOver={(e) => {
@@ -319,7 +413,7 @@ export default function NewProjectPage() {
                   )}
                 </div>
 
-                {uploadState === 'extracting' && (
+                {uploadState === 'extracting' && sourceType === 'pdf' && (
                   <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Extracting text from PDF...
@@ -335,7 +429,7 @@ export default function NewProjectPage() {
                   </div>
                 )}
 
-                {uploadState === 'error' && (
+                {uploadState === 'error' && sourceType === 'pdf' && (
                   <div className="mt-3 flex items-center gap-2 text-sm text-destructive">
                     <AlertCircle className="h-4 w-4" />
                     Failed to process PDF. Please try again.
@@ -343,18 +437,19 @@ export default function NewProjectPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="youtube" className="mt-4 space-y-3">
+              {/* URL Tab */}
+              <TabsContent value="url" className="mt-4 space-y-3">
                 <div className="space-y-2">
-                  <Label htmlFor="youtube-url">YouTube URL</Label>
+                  <Label htmlFor="web-url">Article or Blog URL</Label>
                   <Input
-                    id="youtube-url"
-                    value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    id="web-url"
+                    value={webUrl}
+                    onChange={(e) => setWebUrl(e.target.value)}
+                    placeholder="https://example.com/my-article"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  We extract the transcript automatically. The video must have captions enabled.
+                  Paste any article, blog post, or web page URL. AI will extract and turn it into an anime series.
                 </p>
               </TabsContent>
             </Tabs>
@@ -371,22 +466,20 @@ export default function NewProjectPage() {
           </Button>
           <Button
             type="submit"
-            disabled={
-              createProject.isPending || extractYoutube.isPending || uploadState === 'uploading' || uploadState === 'extracting'
-            }
+            disabled={isSubmitting}
             className="flex-1"
           >
-            {createProject.isPending || extractYoutube.isPending || uploadState === 'uploading' || uploadState === 'extracting' ? (
+            {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {uploadState === 'extracting'
                   ? sourceType === 'youtube'
                     ? 'Extracting transcript...'
-                    : 'Processing PDF...'
+                    : 'Processing...'
                   : 'Creating project...'}
               </>
             ) : (
-              'Create Project'
+              'Create Anime'
             )}
           </Button>
         </div>

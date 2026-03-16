@@ -14,7 +14,7 @@ export async function generateMetadata({
   const { episodeId } = await params;
 
   if (!UUID_RE.test(episodeId)) {
-    return { title: 'Episode Not Found — AnimeLearn' };
+    return { title: 'Episode Not Found — AnimeForge' };
   }
 
   const episode = await db
@@ -32,7 +32,7 @@ export async function generateMetadata({
   const ep = episode[0];
   if (!ep || ep.status !== 'ready') {
     return {
-      title: 'Episode Not Found — AnimeLearn',
+      title: 'Episode Not Found — AnimeForge',
     };
   }
 
@@ -43,12 +43,12 @@ export async function generateMetadata({
     .limit(1);
 
   const plan = project[0]?.seriesPlan as unknown as SeriesPlan | null;
-  const seriesTitle = plan?.series?.title ?? 'AnimeLearn';
+  const seriesTitle = plan?.series?.title ?? 'AnimeForge';
 
   const title = `Episode ${ep.episodeNumber}: ${ep.title} — ${seriesTitle}`;
   const description =
     ep.synopsis ??
-    `Watch Episode ${ep.episodeNumber} of ${seriesTitle} on AnimeLearn`;
+    `Watch Episode ${ep.episodeNumber} of ${seriesTitle} on AnimeForge`;
 
   return {
     title,
@@ -56,7 +56,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      siteName: 'AnimeLearn',
+      siteName: 'AnimeForge',
       type: 'video.episode',
     },
     twitter: {

@@ -33,12 +33,13 @@ export const projectRouter = router({
     .input(
       z.object({
         title: z.string().min(1).max(200),
-        sourceType: z.enum(['pdf', 'youtube']),
+        sourceType: z.enum(['pdf', 'youtube', 'text', 'idea', 'url']),
         sourceUrl: z.string().optional(),
+        rawContent: z.string().optional(),
         style: z
           .enum(['clean_modern', 'soft_pastel', 'dark_dramatic', 'retro_classic'])
           .default('clean_modern'),
-        language: z.string().default('es'),
+        language: z.string().default('en'),
         targetDurationMinutes: z.number().int().min(1).max(15).default(5),
       }),
     )
@@ -50,6 +51,7 @@ export const projectRouter = router({
           title: input.title,
           sourceType: input.sourceType,
           sourceUrl: input.sourceUrl,
+          rawContent: input.rawContent,
           style: input.style,
           language: input.language,
           targetDurationMinutes: input.targetDurationMinutes,

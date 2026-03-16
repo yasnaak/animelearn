@@ -4,28 +4,33 @@ import { use, useMemo, useState } from 'react';
 import { Player } from '@remotion/player';
 import { trpc } from '@/lib/trpc/client';
 import { EpisodeComposition } from '@/remotion/EpisodeComposition';
-import type { EpisodeCompositionProps } from '@/remotion/types';
+import { EpisodeCompositionV2 } from '@/remotion/EpisodeCompositionV2';
+import type { EpisodeCompositionProps, EpisodeCompositionPropsV2 } from '@/remotion/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ArrowLeft,
-  BookOpen,
-  BrainCircuit,
-  ChevronDown,
-  ChevronUp,
   Download,
   Loader2,
-  RotateCcw,
-  Lightbulb,
-  HelpCircle,
+  Copy,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Youtube,
+  Tag,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
-import type { StudyNotes } from '@/server/services/ai-pipeline';
 
 const FPS = 30;
 const INTRO_FRAMES = 150;
 const END_CARD_FRAMES = 450;
 const TRANSITION_FRAMES = 15;
+
+// V2 constants
+const COLD_OPEN_FRAMES = 3 * FPS;
+const TITLE_CARD_FRAMES = 3 * FPS;
+const INTRA_SCENE_TRANSITION = 3;
+const INTER_SCENE_TRANSITION = 15;
 
 function calculateTotalFrames(props: EpisodeCompositionProps): number {
   let panelFrames = 0;
@@ -40,113 +45,164 @@ function calculateTotalFrames(props: EpisodeCompositionProps): number {
   return INTRO_FRAMES + panelFrames + END_CARD_FRAMES;
 }
 
-function StudyNotesSection({ notes }: { notes: StudyNotes }) {
-  const [expanded, setExpanded] = useState(false);
+function calculateTotalFramesV2(props: EpisodeCompositionPropsV2): number {
+  let currentFrame = props.coldOpen ? COLD_OPEN_FRAMES : 0;
+  currentFrame += TITLE_CARD_FRAMES;
+
+  for (const scene of props.scenes) {
+    for (let i = 0; i < scene.shots.length; i++) {
+      const isFirstShotOfScene = i === 0;
+      const transitionFrames = isFirstShotOfScene
+        ? INTER_SCENE_TRANSITION
+        : INTRA_SCENE_TRANSITION;
+      currentFrame += scene.shots[i].durationFrames - transitionFrames;
+    }
+  }
+
+  currentFrame += END_CARD_FRAMES;
+  return currentFrame;
+}
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900">
-      <CardHeader
-        className="cursor-pointer"
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleCopy}
+      className="h-7 gap-1 text-xs text-zinc-400 hover:text-zinc-200"
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-green-400" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+      {copied ? 'Copied' : label}
+    </Button>
+  );
+}
+
+interface YouTubeMetadata {
+  title?: string;
+  description?: string;
+  tags?: string[];
+  chapters?: Array<{ time: string; label: string }>;
+  thumbnail_prompt?: string;
+  shorts_hook?: string;
+}
+
+function YouTubeMetadataPanel({ metadata }: { metadata: YouTubeMetadata }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!metadata.title && !metadata.description && !metadata.tags?.length) {
+    return null;
+  }
+
+  const fullDescription = [
+    metadata.description ?? '',
+    metadata.chapters?.length
+      ? '\n\nChapters:\n' + metadata.chapters.map((c) => `${c.time} ${c.label}`).join('\n')
+      : '',
+    metadata.tags?.length
+      ? '\n\n' + metadata.tags.map((t) => `#${t.replace(/\s+/g, '')}`).join(' ')
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50">
+      <button
         onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base text-zinc-200">
-            <BookOpen className="h-4 w-4 text-cyan-400" />
-            Study Notes
-          </CardTitle>
-          {expanded ? (
-            <ChevronUp className="h-4 w-4 text-zinc-500" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-zinc-500" />
-          )}
+        <div className="flex items-center gap-2">
+          <Youtube className="h-4 w-4 text-red-400" />
+          <span className="text-sm font-medium text-zinc-200">YouTube-Ready Metadata</span>
         </div>
-      </CardHeader>
+        <span className="text-xs text-zinc-500">{expanded ? 'Collapse' : 'Expand'}</span>
+      </button>
 
       {expanded && (
-        <CardContent className="space-y-6 pt-0">
-          {/* Summary */}
-          <div>
-            <p className="text-sm leading-relaxed text-zinc-400">
-              {notes.summary}
-            </p>
-          </div>
-
-          {/* Key Concepts */}
-          <div>
-            <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-zinc-300">
-              <Lightbulb className="h-3.5 w-3.5 text-amber-400" />
-              Key Concepts
-            </h4>
-            <div className="space-y-3">
-              {notes.key_concepts.map((concept, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border border-zinc-800 bg-zinc-800/30 p-3"
-                >
-                  <p className="text-sm font-medium text-zinc-200">
-                    {concept.name}
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-400">
-                    {concept.definition}
-                  </p>
-                  <p className="mt-1 text-xs italic text-zinc-500">
-                    {concept.importance}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Key Takeaways */}
-          <div>
-            <h4 className="mb-2 text-sm font-medium text-zinc-300">
-              Key Takeaways
-            </h4>
-            <ul className="space-y-1">
-              {notes.key_takeaways.map((point, i) => (
-                <li
-                  key={i}
-                  className="flex gap-2 text-sm text-zinc-400"
-                >
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-cyan-500" />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Review Questions */}
-          <div>
-            <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-zinc-300">
-              <HelpCircle className="h-3.5 w-3.5 text-fuchsia-400" />
-              Review Questions
-            </h4>
-            <ol className="space-y-2">
-              {notes.review_questions.map((q, i) => (
-                <li
-                  key={i}
-                  className="flex gap-2 text-sm text-zinc-400"
-                >
-                  <span className="shrink-0 text-zinc-600">{i + 1}.</span>
-                  {q}
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          {notes.connections_to_next && (
-            <div className="rounded-lg border border-cyan-500/10 bg-cyan-500/5 p-3">
-              <p className="text-xs font-medium text-cyan-400">
-                Coming up next...
-              </p>
-              <p className="mt-1 text-sm text-zinc-400">
-                {notes.connections_to_next}
+        <div className="space-y-4 border-t border-zinc-800 px-4 py-4">
+          {/* Title */}
+          {metadata.title && (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                  <FileText className="h-3 w-3" />
+                  Video Title
+                </label>
+                <CopyButton text={metadata.title} label="Copy" />
+              </div>
+              <p className="mt-1 rounded bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200">
+                {metadata.title}
               </p>
             </div>
           )}
-        </CardContent>
+
+          {/* Description */}
+          {fullDescription && (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-zinc-500">
+                  Description
+                </label>
+                <CopyButton text={fullDescription} label="Copy All" />
+              </div>
+              <pre className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap rounded bg-zinc-800/50 px-3 py-2 text-xs leading-relaxed text-zinc-300">
+                {fullDescription}
+              </pre>
+            </div>
+          )}
+
+          {/* Tags */}
+          {metadata.tags && metadata.tags.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                  <Tag className="h-3 w-3" />
+                  Tags ({metadata.tags.length})
+                </label>
+                <CopyButton text={metadata.tags.join(', ')} label="Copy" />
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {metadata.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs text-zinc-400"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Shorts hook */}
+          {metadata.shorts_hook && (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-zinc-500">
+                  Shorts Hook
+                </label>
+                <CopyButton text={metadata.shorts_hook} label="Copy" />
+              </div>
+              <p className="mt-1 rounded bg-zinc-800/50 px-3 py-2 text-xs italic text-zinc-400">
+                {metadata.shorts_hook}
+              </p>
+            </div>
+          )}
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -160,25 +216,15 @@ export default function WatchEpisodePage({
   const { data, isLoading, error } =
     trpc.render.getPublicCompositionProps.useQuery({ episodeId });
 
-  const { data: notesData } = trpc.learning.getStudyNotes.useQuery(
-    { episodeId },
-    { enabled: !!data },
-  );
-
-  const { data: quizData } = trpc.learning.getQuiz.useQuery(
-    { episodeId },
-    { enabled: !!data },
-  );
-
-  const { data: flashcardData } = trpc.learning.getFlashcards.useQuery(
-    { episodeId },
-    { enabled: !!data },
-  );
+  const isV2 = data?.isV2 ?? false;
 
   const totalFrames = useMemo(() => {
     if (!data?.props) return 300;
-    return calculateTotalFrames(data.props);
-  }, [data?.props]);
+    if (isV2) {
+      return calculateTotalFramesV2(data.props as unknown as EpisodeCompositionPropsV2);
+    }
+    return calculateTotalFrames(data.props as unknown as EpisodeCompositionProps);
+  }, [data?.props, isV2]);
 
   if (isLoading) {
     return (
@@ -199,13 +245,14 @@ export default function WatchEpisodePage({
           This episode may not exist or is still being generated.
         </p>
         <Button asChild variant="outline" className="mt-6">
-          <Link href="/">Go to AnimeLearn</Link>
+          <Link href="/">Go Home</Link>
         </Button>
       </div>
     );
   }
 
-  const { props, episode, series } = data;
+  const { props, episode, series, youtubeMetadata, navigation } = data;
+  const ytMeta = youtubeMetadata as YouTubeMetadata | null;
 
   return (
     <div className="min-h-screen bg-black">
@@ -233,7 +280,11 @@ export default function WatchEpisodePage({
         <div className="relative overflow-hidden rounded-lg bg-zinc-900 shadow-2xl shadow-black/50">
           <div className="aspect-video">
             <Player
-              component={EpisodeComposition as unknown as React.ComponentType<Record<string, unknown>>}
+              component={
+                isV2
+                  ? (EpisodeCompositionV2 as unknown as React.ComponentType<Record<string, unknown>>)
+                  : (EpisodeComposition as unknown as React.ComponentType<Record<string, unknown>>)
+              }
               inputProps={props}
               durationInFrames={totalFrames}
               compositionWidth={1920}
@@ -248,6 +299,32 @@ export default function WatchEpisodePage({
             />
           </div>
         </div>
+
+        {/* Episode navigation */}
+        {(navigation?.prev || navigation?.next) && (
+          <div className="mt-4 flex items-center justify-between">
+            {navigation.prev ? (
+              <Button asChild variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-200">
+                <Link href={`/watch/${navigation.prev.id}`}>
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Ep. {navigation.prev.episodeNumber}: {navigation.prev.title}
+                </Link>
+              </Button>
+            ) : (
+              <div />
+            )}
+            {navigation.next ? (
+              <Button asChild variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-200">
+                <Link href={`/watch/${navigation.next.id}`}>
+                  Ep. {navigation.next.episodeNumber}: {navigation.next.title}
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <div />
+            )}
+          </div>
+        )}
 
         {/* Episode info + actions */}
         <div className="mt-6 max-w-3xl space-y-6">
@@ -282,58 +359,8 @@ export default function WatchEpisodePage({
             </div>
           </div>
 
-          {/* Quiz CTA */}
-          {quizData?.quiz && (
-            <Card className="border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-950/20 to-cyan-950/20">
-              <CardContent className="flex items-center gap-4 py-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-fuchsia-500/10">
-                  <BrainCircuit className="h-5 w-5 text-fuchsia-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-zinc-200">
-                    Test your knowledge
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {quizData.quiz.questions.length} questions based on this episode
-                  </p>
-                </div>
-                <Button asChild size="sm" className="bg-gradient-to-r from-fuchsia-500 to-cyan-500">
-                  <Link href={`/watch/${episodeId}/quiz`}>
-                    Take Quiz
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Flashcards CTA */}
-          {flashcardData?.deck && flashcardData.deck.cards.length > 0 && (
-            <Card className="border-cyan-500/20 bg-gradient-to-r from-cyan-950/20 to-fuchsia-950/20">
-              <CardContent className="flex items-center gap-4 py-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500/10">
-                  <RotateCcw className="h-5 w-5 text-cyan-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-zinc-200">
-                    Review with flashcards
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {flashcardData.deck.cards.length} cards with spaced repetition
-                  </p>
-                </div>
-                <Button asChild size="sm" variant="outline" className="border-cyan-500/30 text-cyan-300">
-                  <Link href={`/watch/${episodeId}/flashcards`}>
-                    Study Now
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Study Notes */}
-          {notesData?.notes && (
-            <StudyNotesSection notes={notesData.notes} />
-          )}
+          {/* YouTube metadata */}
+          {ytMeta && <YouTubeMetadataPanel metadata={ytMeta} />}
         </div>
       </main>
     </div>
