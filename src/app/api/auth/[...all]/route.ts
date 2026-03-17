@@ -3,33 +3,36 @@ import { toNextJsHandler } from 'better-auth/next-js';
 
 const handler = toNextJsHandler(auth);
 
-export const GET = handler.GET;
+export const GET = async (req: Request) => {
+  try {
+    return await handler.GET(req);
+  } catch (e) {
+    console.error('[auth GET error]', e);
+    return Response.json(
+      { error: 'GET handler threw', message: String(e), stack: (e as Error).stack },
+      { status: 500 },
+    );
+  }
+};
 
 export const POST = async (req: Request) => {
-  const url = new URL(req.url);
-  console.log('[auth POST]', url.pathname, {
-    origin: req.headers.get('origin'),
-    referer: req.headers.get('referer'),
-    host: req.headers.get('host'),
-  });
+  try {
+    const url = new URL(req.url);
+    console.log('[auth POST]', url.pathname);
 
-  const res = await handler.POST(req);
+    const res = await handler.POST(req);
 
-  if (res.status >= 400) {
-    const body = await res.clone().text();
-    console.error('[auth POST error]', res.status, body || '(empty body)');
-    // Return the body for debugging if empty
-    if (!body) {
-      return new Response(
-        JSON.stringify({
-          error: 'Auth returned empty error',
-          status: res.status,
-          path: url.pathname,
-        }),
-        { status: res.status, headers: { 'Content-Type': 'application/json' } },
-      );
+    if (res.status >= 400) {
+      const body = await res.clone().text();
+      console.error('[auth POST response error]', res.status, body || '(empty body)');
     }
-  }
 
-  return res;
+    return res;
+  } catch (e) {
+    console.error('[auth POST threw]', e);
+    return Response.json(
+      { error: 'POST handler threw', message: String(e), stack: (e as Error).stack },
+      { status: 500 },
+    );
+  }
 };
