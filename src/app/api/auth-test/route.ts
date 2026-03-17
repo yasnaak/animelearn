@@ -1,10 +1,19 @@
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.text();
-    const { auth } = await import('@/lib/auth');
+  // Step 1: verify handler executes
+  const steps: string[] = ['start'];
 
+  try {
+    // Step 2: read body
+    const body = await req.text();
+    steps.push(`body_read(${body.length}chars)`);
+
+    // Step 3: import auth
+    const { auth } = await import('@/lib/auth');
+    steps.push('auth_imported');
+
+    // Step 4: create request
     const fakeReq = new Request(
       'https://animelearn.vercel.app/api/auth/sign-in/email',
       {
@@ -13,18 +22,24 @@ export async function POST(req: Request) {
         body,
       },
     );
+    steps.push('request_created');
 
+    // Step 5: call handler
     const res = await auth.handler(fakeReq);
-    const resBody = await res.text();
+    steps.push(`handler_returned(${res.status})`);
 
-    return new Response(resBody, {
+    // Step 6: read response
+    const resBody = await res.text();
+    steps.push(`body_read(${resBody.length}chars)`);
+
+    return Response.json({
+      steps,
       status: res.status,
-      headers: res.headers,
+      body: resBody.substring(0, 500) || '(empty)',
+      headers: Object.fromEntries(res.headers.entries()),
     });
   } catch (e) {
-    return Response.json(
-      { error: String(e), stack: (e as Error).stack },
-      { status: 500 },
-    );
+    steps.push(`error: ${String(e)}`);
+    return Response.json({ steps, error: String(e) }, { status: 500 });
   }
 }
