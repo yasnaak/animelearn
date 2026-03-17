@@ -1,7 +1,9 @@
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   const results: Record<string, string> = {};
+  const url = new URL(req.url);
+  const test = url.searchParams.get('test');
 
   // Check env vars
   results.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL
@@ -10,33 +12,44 @@ export async function GET() {
   results.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ? 'SET' : 'MISSING';
   results.DATABASE_URL = process.env.DATABASE_URL ? 'SET' : 'MISSING';
 
-  // Try loading DB
-  try {
-    const { db } = await import('@/server/db');
-    const { sql } = await import('drizzle-orm');
-    await db.execute(sql`SELECT 1 as ok`);
-    results.db = 'OK';
-  } catch (e) {
-    results.db = `ERROR: ${String(e)}`;
+  // Try sign-in via Better Auth API directly
+  if (test === 'signin') {
+    try {
+      const { auth } = await import('@/lib/auth');
+      const res = await auth.api.signInEmail({
+        body: { email: 'yasnaeim@gmail.com', password: 'Hola123.!' },
+      });
+      results.signIn = JSON.stringify(res).substring(0, 500);
+    } catch (e) {
+      results.signIn = `ERROR: ${String(e)}`;
+      results.signInStack = (e as Error).stack?.substring(0, 500) || '';
+    }
   }
 
-  // Try loading auth
-  try {
-    const { auth } = await import('@/lib/auth');
-    results.auth = 'OK';
-    results.authBaseURL = (auth as unknown as { options?: { baseURL?: string } }).options?.baseURL || 'not set';
-  } catch (e) {
-    results.auth = `ERROR: ${String(e)}`;
-  }
+  // Try simulating the handler POST
+  if (test === 'handler') {
+    try {
+      const { auth } = await import('@/lib/auth');
+      const { toNextJsHandler } = await import('better-auth/next-js');
+      const handler = toNextJsHandler(auth);
 
-  // Try loading handler
-  try {
-    const { auth } = await import('@/lib/auth');
-    const { toNextJsHandler } = await import('better-auth/next-js');
-    const handler = toNextJsHandler(auth);
-    results.handler = typeof handler.POST === 'function' ? 'OK (has POST)' : 'MISSING POST';
-  } catch (e) {
-    results.handler = `ERROR: ${String(e)}`;
+      const fakeReq = new Request('https://animelearn.vercel.app/api/auth/sign-in/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'yasnaeim@gmail.com', password: 'Hola123.!' }),
+      });
+
+      const res = await handler.POST(fakeReq);
+      const body = await res.text();
+      results.handlerStatus = String(res.status);
+      results.handlerBody = body.substring(0, 500) || '(empty)';
+      results.handlerHeaders = JSON.stringify(
+        Object.fromEntries(res.headers.entries()),
+      ).substring(0, 500);
+    } catch (e) {
+      results.handlerTest = `ERROR: ${String(e)}`;
+      results.handlerStack = (e as Error).stack?.substring(0, 500) || '';
+    }
   }
 
   return Response.json(results, { status: 200 });
