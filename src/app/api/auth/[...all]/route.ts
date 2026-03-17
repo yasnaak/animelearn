@@ -9,25 +9,33 @@ export const GET = async (req: Request) => {
 
 export const POST = async (req: Request) => {
   try {
-    // Clone request to read body for debugging
-    const clonedReq = req.clone();
-    const bodyText = await clonedReq.text();
-
     const { auth } = await import('@/lib/auth');
-    const res = await auth.handler(req);
 
-    // If error, return debug info
+    // Reconstruct clean request — Vercel headers may confuse Better Auth
+    const url = new URL(req.url);
+    const body = await req.text();
+    const cleanReq = new Request(url.toString(), {
+      method: 'POST',
+      headers: {
+        'content-type': req.headers.get('content-type') || 'application/json',
+        'origin': req.headers.get('origin') || url.origin,
+      },
+      body,
+    });
+
+    const res = await auth.handler(cleanReq);
+
+    // Debug: if still failing, return info
     if (res.status >= 400) {
       const resBody = await res.clone().text();
-      return Response.json({
-        debug: true,
-        requestUrl: req.url,
-        requestHeaders: Object.fromEntries(req.headers.entries()),
-        requestBody: bodyText.substring(0, 200),
-        responseStatus: res.status,
-        responseBody: resBody.substring(0, 500) || '(empty)',
-        responseHeaders: Object.fromEntries(res.headers.entries()),
-      }, { status: res.status });
+      if (!resBody) {
+        return Response.json({
+          debug: true,
+          cleanUrl: url.toString(),
+          responseStatus: res.status,
+          responseBody: '(empty)',
+        }, { status: res.status });
+      }
     }
 
     return res;
