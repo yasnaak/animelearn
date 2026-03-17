@@ -20,32 +20,6 @@ export async function GET(req: Request) {
       results.signIn = JSON.stringify(res).substring(0, 500);
     } catch (e) {
       results.signIn = `ERROR: ${String(e)}`;
-      results.signInStack = (e as Error).stack?.substring(0, 500) || '';
-    }
-  }
-
-  if (test === 'handler') {
-    try {
-      const { auth } = await import('@/lib/auth');
-      const { toNextJsHandler } = await import('better-auth/next-js');
-      const handler = toNextJsHandler(auth);
-
-      const fakeReq = new Request('https://animelearn.vercel.app/api/auth/sign-in/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'yasnaeim@gmail.com', password: 'Hola123.!' }),
-      });
-
-      const res = await handler.POST(fakeReq);
-      const body = await res.text();
-      results.handlerStatus = String(res.status);
-      results.handlerBody = body.substring(0, 500) || '(empty)';
-      results.handlerHeaders = JSON.stringify(
-        Object.fromEntries(res.headers.entries()),
-      ).substring(0, 500);
-    } catch (e) {
-      results.handlerTest = `ERROR: ${String(e)}`;
-      results.handlerStack = (e as Error).stack?.substring(0, 500) || '';
     }
   }
 
@@ -53,18 +27,29 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // Proxy auth handler via this debug endpoint
   try {
-    const body = await req.json();
+    const body = await req.text();
     const url = new URL(req.url);
-    return Response.json({
-      received: true,
-      body,
-      url: url.pathname,
-      headers: {
-        contentType: req.headers.get('content-type'),
-        origin: req.headers.get('origin'),
-        host: req.headers.get('host'),
+    const authPath = url.searchParams.get('path') || '/api/auth/sign-in/email';
+
+    const { auth } = await import('@/lib/auth');
+
+    const fakeReq = new Request(
+      `https://animelearn.vercel.app${authPath}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
       },
+    );
+
+    const res = await auth.handler(fakeReq);
+    const resBody = await res.text();
+
+    return new Response(resBody || JSON.stringify({ proxied: true, status: res.status }), {
+      status: res.status,
+      headers: res.headers,
     });
   } catch (e) {
     return Response.json({ error: String(e) }, { status: 500 });
