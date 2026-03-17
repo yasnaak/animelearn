@@ -13,7 +13,8 @@ export async function GET() {
   // Try loading DB
   try {
     const { db } = await import('@/server/db');
-    const res = await db.execute(new (await import('drizzle-orm')).SQL(['SELECT 1 as ok'], []));
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`SELECT 1 as ok`);
     results.db = 'OK';
   } catch (e) {
     results.db = `ERROR: ${String(e)}`;
@@ -33,7 +34,7 @@ export async function GET() {
     const { auth } = await import('@/lib/auth');
     const { toNextJsHandler } = await import('better-auth/next-js');
     const handler = toNextJsHandler(auth);
-    results.handler = handler.POST ? 'OK (has POST)' : 'MISSING POST';
+    results.handler = typeof handler.POST === 'function' ? 'OK (has POST)' : 'MISSING POST';
   } catch (e) {
     results.handler = `ERROR: ${String(e)}`;
   }
