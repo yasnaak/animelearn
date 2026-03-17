@@ -5,14 +5,12 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const test = url.searchParams.get('test');
 
-  // Check env vars
   results.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL
     ? `"${process.env.BETTER_AUTH_URL}" (len: ${process.env.BETTER_AUTH_URL.length})`
     : 'MISSING';
   results.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ? 'SET' : 'MISSING';
   results.DATABASE_URL = process.env.DATABASE_URL ? 'SET' : 'MISSING';
 
-  // Try sign-in via Better Auth API directly
   if (test === 'signin') {
     try {
       const { auth } = await import('@/lib/auth');
@@ -26,7 +24,6 @@ export async function GET(req: Request) {
     }
   }
 
-  // Try simulating the handler POST
   if (test === 'handler') {
     try {
       const { auth } = await import('@/lib/auth');
@@ -53,4 +50,23 @@ export async function GET(req: Request) {
   }
 
   return Response.json(results, { status: 200 });
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const url = new URL(req.url);
+    return Response.json({
+      received: true,
+      body,
+      url: url.pathname,
+      headers: {
+        contentType: req.headers.get('content-type'),
+        origin: req.headers.get('origin'),
+        host: req.headers.get('host'),
+      },
+    });
+  } catch (e) {
+    return Response.json({ error: String(e) }, { status: 500 });
+  }
 }
