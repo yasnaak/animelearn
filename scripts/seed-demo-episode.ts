@@ -35,9 +35,6 @@ import {
   validateScript,
   generateVisualPrompts,
   generateAudioDirection,
-  generateQuiz,
-  generateStudyNotes,
-  generateFlashcards,
   type ContentAnalysis,
   type SeriesPlan,
   type EpisodeScript,
@@ -205,7 +202,7 @@ async function main() {
   const t1 = Date.now();
   const analysisResult = await analyzeContent(RAW_CONTENT, 'pdf', LANGUAGE);
   console.log(
-    `  Done (${((Date.now() - t1) / 1000).toFixed(1)}s) — ${analysisResult.data.metadata.total_concepts} concepts found`,
+    `  Done (${((Date.now() - t1) / 1000).toFixed(1)}s) — ${analysisResult.data.story_elements.length} story elements found`,
   );
 
   await db
@@ -516,31 +513,8 @@ async function main() {
 
   console.log(`  Done (${((Date.now() - t7) / 1000).toFixed(1)}s) — ${audioCount} audio tracks`);
 
-  // ── Phase 8: Quiz + Study Notes + Flashcards ──
-  console.log('[8/8] Generating quiz + study notes...');
-  const t8 = Date.now();
-  try {
-    const [quizResult, notesResult, flashcardsResult] = await Promise.all([
-      generateQuiz(script, analysis, 1, LANGUAGE),
-      generateStudyNotes(script, analysis, 1, script.end_card.teaser_next_episode, LANGUAGE),
-      generateFlashcards(script, analysis, 1, LANGUAGE),
-    ]);
-
-    await db
-      .update(episodes)
-      .set({
-        quizData: quizResult.data as unknown as Record<string, unknown>,
-        studyNotes: notesResult.data as unknown as Record<string, unknown>,
-        flashcardData: flashcardsResult.data as unknown as Record<string, unknown>,
-      })
-      .where(eq(episodes.id, episode.id));
-
-    console.log(
-      `  Done (${((Date.now() - t8) / 1000).toFixed(1)}s) — ${quizResult.data.questions.length} quiz questions, ${flashcardsResult.data.cards.length} flashcards`,
-    );
-  } catch (err) {
-    console.warn('  Quiz/notes generation failed (non-critical):', err);
-  }
+  // ── Phase 8: (Quiz/study notes removed — entertainment pivot) ──
+  console.log('[8/8] Skipping quiz/study notes (entertainment mode)...');
 
   // ── Mark Ready + Public ──
   await db

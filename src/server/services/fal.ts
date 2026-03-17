@@ -61,6 +61,18 @@ const STYLE_MODIFIERS: Record<string, { prompt: string; negative: string }> = {
     negative:
       'blurry, low quality, realistic, 3d render, modern anime, clean digital, text, watermark, nsfw',
   },
+  sketch_cartoon: {
+    prompt:
+      'simple cartoon illustration, stick figure characters with large round heads, bold black outlines, flat colors, minimal shading, editorial cartoon style, clean beige background, explainer video aesthetic, hand-drawn look, MS Paint style, western cartoon, bold expressive faces, comic strip art',
+    negative:
+      'anime, realistic, 3d render, detailed shading, complex background, photorealistic, blurry, watermark, nsfw, gradient, soft shadows',
+  },
+  illustrated_cartoon: {
+    prompt:
+      'detailed cartoon illustration, colorful digital painting, rich detailed backgrounds, expressive cartoon characters, bold outlines, vibrant flat colors, children book illustration quality, western animation style, cartoon network aesthetic, detailed environments, warm palette, professional cartoon art',
+    negative:
+      'anime, realistic, 3d render, photorealistic, blurry, low quality, text, watermark, nsfw, stick figure, minimal art',
+  },
 };
 
 export function getStyleModifiers(style: string) {
@@ -592,6 +604,39 @@ export async function animateShot(options: {
     videoUrl: video.url,
     durationSeconds: options.durationSeconds,
   };
+}
+
+// ============================================================
+// AUDIO TRANSCRIPTION (Whisper via fal.ai)
+// ============================================================
+
+interface WhisperResult {
+  text: string;
+  chunks: Array<{ text: string; timestamp: [number, number] }>;
+}
+
+/**
+ * Transcribe audio using fal.ai's Whisper model.
+ * Accepts any publicly-accessible audio URL.
+ */
+export async function transcribeAudio(audioUrl: string): Promise<WhisperResult> {
+  ensureFalConfig();
+
+  const result = await withRetry(
+    () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fal.subscribe('fal-ai/whisper' as any, {
+        input: {
+          audio_url: audioUrl,
+          task: 'transcribe',
+          chunk_level: 'segment',
+        } as Record<string, unknown>,
+      }),
+    { label: 'whisper-transcribe', maxRetries: 1, baseDelayMs: 3000 },
+  );
+
+  const data = result.data as WhisperResult;
+  return data;
 }
 
 // ============================================================

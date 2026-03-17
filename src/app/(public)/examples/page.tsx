@@ -12,6 +12,8 @@ const STYLE_LABELS: Record<string, string> = {
   soft_pastel: 'Soft Pastel',
   dark_dramatic: 'Dark Dramatic',
   retro_classic: 'Retro Classic',
+  sketch_cartoon: 'Sketch Cartoon',
+  illustrated_cartoon: 'Illustrated Cartoon',
 };
 
 export default function ExamplesPage() {
@@ -36,7 +38,7 @@ export default function ExamplesPage() {
               Example Episodes
             </h1>
             <p className="text-xs text-zinc-500">
-              See what AnimeForge can create — no account needed
+              See what Drawnema can create — no account needed
             </p>
           </div>
         </div>

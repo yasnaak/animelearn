@@ -29,6 +29,8 @@ export const VISUAL_STYLES = [
   'soft_pastel',
   'dark_dramatic',
   'retro_classic',
+  'sketch_cartoon',
+  'illustrated_cartoon',
 ] as const;
 
 export type VisualStyle = (typeof VISUAL_STYLES)[number];

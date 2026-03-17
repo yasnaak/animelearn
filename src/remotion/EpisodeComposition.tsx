@@ -114,7 +114,7 @@ export const EpisodeComposition: React.FC<EpisodeCompositionProps> = ({
               fontFamily: "'Noto Sans', sans-serif",
             }}
           >
-            AnimeForge
+            Drawnema
           </div>
         </AbsoluteFill>
       </Sequence>

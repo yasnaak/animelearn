@@ -37,7 +37,7 @@ export const projectRouter = router({
         sourceUrl: z.string().optional(),
         rawContent: z.string().optional(),
         style: z
-          .enum(['clean_modern', 'soft_pastel', 'dark_dramatic', 'retro_classic'])
+          .enum(['clean_modern', 'soft_pastel', 'dark_dramatic', 'retro_classic', 'sketch_cartoon', 'illustrated_cartoon'])
           .default('clean_modern'),
         language: z.string().default('en'),
         targetDurationMinutes: z.number().int().min(1).max(15).default(5),

@@ -14,7 +14,7 @@ export async function generateMetadata({
   const { episodeId } = await params;
 
   if (!UUID_RE.test(episodeId)) {
-    return { title: 'Episode Not Found — AnimeForge' };
+    return { title: 'Episode Not Found — Drawnema' };
   }
 
   const episode = await db
@@ -32,7 +32,7 @@ export async function generateMetadata({
   const ep = episode[0];
   if (!ep || ep.status !== 'ready') {
     return {
-      title: 'Episode Not Found — AnimeForge',
+      title: 'Episode Not Found — Drawnema',
     };
   }
 
@@ -43,12 +43,12 @@ export async function generateMetadata({
     .limit(1);
 
   const plan = project[0]?.seriesPlan as unknown as SeriesPlan | null;
-  const seriesTitle = plan?.series?.title ?? 'AnimeForge';
+  const seriesTitle = plan?.series?.title ?? 'Drawnema';
 
   const title = `Episode ${ep.episodeNumber}: ${ep.title} — ${seriesTitle}`;
   const description =
     ep.synopsis ??
-    `Watch Episode ${ep.episodeNumber} of ${seriesTitle} on AnimeForge`;
+    `Watch Episode ${ep.episodeNumber} of ${seriesTitle} on Drawnema`;
 
   return {
     title,
@@ -56,7 +56,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      siteName: 'AnimeForge',
+      siteName: 'Drawnema',
       type: 'video.episode',
     },
     twitter: {

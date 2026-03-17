@@ -163,7 +163,7 @@ export async function GET(
   // Render to temp file
   const outputPath = path.join(
     os.tmpdir(),
-    `animeforge-${episodeId}-${Date.now()}.mp4`,
+    `drawnema-${episodeId}-${Date.now()}.mp4`,
   );
 
   try {

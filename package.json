@@ -1,5 +1,5 @@
 {
-  "name": "animeforge",
+  "name": "drawnema",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,6 +14,7 @@
     "@aws-sdk/cloudfront-signer": "^3.1001.0",
     "@aws-sdk/s3-request-presigner": "^3.1002.0",
     "@better-auth/drizzle-adapter": "^1.5.3",
+    "@distube/ytdl-core": "^4.16.12",
     "@elevenlabs/elevenlabs-js": "^2.37.0",
     "@fal-ai/client": "^1.9.4",
     "@remotion/bundler": "^4.0.434",

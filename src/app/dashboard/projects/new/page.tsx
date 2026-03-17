@@ -138,7 +138,7 @@ export default function NewProjectPage() {
         sourceType,
         sourceUrl,
         rawContent,
-        style: style as 'clean_modern' | 'soft_pastel' | 'dark_dramatic' | 'retro_classic',
+        style: style as 'clean_modern' | 'soft_pastel' | 'dark_dramatic' | 'retro_classic' | 'sketch_cartoon' | 'illustrated_cartoon',
         language,
         targetDurationMinutes: parseInt(duration, 10),
       });
@@ -234,6 +234,8 @@ export default function NewProjectPage() {
                     <SelectItem value="soft_pastel">Soft Pastel</SelectItem>
                     <SelectItem value="dark_dramatic">Dark Dramatic</SelectItem>
                     <SelectItem value="retro_classic">Retro Classic</SelectItem>
+                    <SelectItem value="sketch_cartoon">Sketch Cartoon</SelectItem>
+                    <SelectItem value="illustrated_cartoon">Illustrated Cartoon</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

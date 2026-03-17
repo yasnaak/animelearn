@@ -10,7 +10,7 @@ const HEIGHT = 1080;
 const defaultProps: EpisodeCompositionProps = {
   title: 'Preview Episode',
   episodeNumber: 1,
-  seriesTitle: 'AnimeForge',
+  seriesTitle: 'Drawnema',
   scenes: [],
   endCard: {
     summaryPoints: ['Point 1', 'Point 2', 'Point 3'],
@@ -24,7 +24,7 @@ const defaultProps: EpisodeCompositionProps = {
 const defaultPropsV2: EpisodeCompositionPropsV2 = {
   title: 'Preview Episode',
   episodeNumber: 1,
-  seriesTitle: 'AnimeForge',
+  seriesTitle: 'Drawnema',
   coldOpen: null,
   scenes: [],
   endCard: {

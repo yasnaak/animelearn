@@ -80,7 +80,7 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
                   <Sparkles className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">AnimeForge</span>
+                  <span className="font-semibold">Drawnema</span>
                   <span className="text-xs text-muted-foreground">
                     Ideas → Anime
                   </span>
