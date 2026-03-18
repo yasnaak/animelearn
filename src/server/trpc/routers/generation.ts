@@ -1096,7 +1096,7 @@ export const generationRouter = router({
         }
 
         // Generate shot images in batches of 4
-        const SHOT_IMAGE_BATCH = 4;
+        const SHOT_IMAGE_BATCH = 8;
         for (let i = 0; i < allShots.length; i += SHOT_IMAGE_BATCH) {
           const batch = allShots.slice(i, i + SHOT_IMAGE_BATCH);
           const progress = 12 + Math.round((i / allShots.length) * 43);
@@ -1163,7 +1163,7 @@ export const generationRouter = router({
           .from(shots)
           .where(eq(shots.episodeId, episode.id));
 
-        const ANIMATION_BATCH = 3;
+        const ANIMATION_BATCH = 6;
         for (let i = 0; i < shotRecords.length; i += ANIMATION_BATCH) {
           const batch = shotRecords.slice(i, i + ANIMATION_BATCH);
           const progress = 55 + Math.round((i / shotRecords.length) * 30);

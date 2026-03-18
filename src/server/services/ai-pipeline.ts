@@ -526,7 +526,7 @@ export async function generateScript(
         : '10-16 panels total (long episode, ~10 minutes)';
 
   return callClaude<EpisodeScript>({
-    model: 'opus',
+    model: 'sonnet',
     systemPrompt: SCRIPT_SYSTEM_PROMPT,
     userPrompt: `Generate a complete panel-by-panel script for episode ${episodeNumber}.
 
@@ -795,7 +795,7 @@ export async function generateScreenplay(
         : '100-160 shots total across all scenes (long episode, ~10 minutes). 8-12 scenes.';
 
   return callClaude<Screenplay>({
-    model: 'opus',
+    model: 'sonnet',
     systemPrompt: SCREENPLAY_SYSTEM_PROMPT,
     userPrompt: `Generate a complete cinematic anime screenplay for episode ${episodeNumber}.
 

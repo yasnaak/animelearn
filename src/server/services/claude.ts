@@ -31,8 +31,8 @@ const MODEL_MAP = {
   opus: 'claude-opus-4-6',
 } as const;
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1500;
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
