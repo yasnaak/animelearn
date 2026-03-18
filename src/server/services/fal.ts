@@ -640,6 +640,51 @@ export async function transcribeAudio(audioUrl: string): Promise<WhisperResult> 
 }
 
 // ============================================================
+// MUSIC GENERATION (Stable Audio via fal.ai)
+// ============================================================
+
+interface MusicResult {
+  audioUrl: string;
+  durationMs: number;
+}
+
+/**
+ * Generate instrumental background music using Stable Audio via fal.ai.
+ * Replaces ElevenLabs music — better quality, ~$0.036/generation vs ~$0.10.
+ */
+export async function generateMusic(
+  prompt: string,
+  durationSeconds: number = 30,
+): Promise<MusicResult> {
+  ensureFalConfig();
+
+  const result = await withRetry(
+    () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fal.subscribe('fal-ai/stable-audio' as any, {
+        input: {
+          prompt: `instrumental, ${prompt}, no vocals, cinematic anime soundtrack`,
+          seconds_total: Math.min(durationSeconds, 47), // Stable Audio max ~47s
+          steps: 100,
+        } as Record<string, unknown>,
+      }),
+    { label: 'stable-audio-music', baseDelayMs: 2000 },
+  );
+
+  const data = result.data as Record<string, unknown>;
+  const audioFile = data.audio_file as { url: string } | undefined;
+
+  if (!audioFile?.url) {
+    throw new Error('No audio generated from Stable Audio');
+  }
+
+  return {
+    audioUrl: audioFile.url,
+    durationMs: Math.min(durationSeconds, 47) * 1000,
+  };
+}
+
+// ============================================================
 // BACKGROUND REMOVAL
 // ============================================================
 

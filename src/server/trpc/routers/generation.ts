@@ -42,12 +42,12 @@ import {
   generateShotImage,
   animateShot,
   generateThumbnail,
+  generateMusic,
 } from '@/server/services/fal';
 import { PLAN_LIMITS } from '@/lib/stripe';
 import {
   generateSpeech,
   generateSoundEffect,
-  generateMusic,
   getVoiceForRole,
   deliveryToVoiceSettings,
 } from '@/server/services/elevenlabs';

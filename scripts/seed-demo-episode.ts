@@ -45,11 +45,11 @@ import {
   generateImage,
   getStyleModifiers,
   generateVideoFromStill,
+  generateMusic,
 } from '../src/server/services/fal';
 import {
   generateSpeech,
   generateSoundEffect,
-  generateMusic,
 } from '../src/server/services/elevenlabs';
 
 // ---------- Config ----------

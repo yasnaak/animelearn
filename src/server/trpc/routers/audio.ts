@@ -11,9 +11,9 @@ import {
 import {
   generateSpeech,
   generateSoundEffect,
-  generateMusic,
   getVoiceForRole,
 } from '@/server/services/elevenlabs';
+import { generateMusic } from '@/server/services/fal';
 
 export const audioRouter = router({
   // Generate audio direction (AI phase)
