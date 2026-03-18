@@ -297,31 +297,38 @@ export async function analyzeContent(
           ? 'web page content'
           : 'text content';
 
-  const chunks = chunkText(rawContent, { maxTokens: 8000 });
+  // Cap content at ~30K chars to avoid excessive chunking and Vercel timeouts
+  const cappedContent =
+    rawContent.length > 30000
+      ? rawContent.slice(0, 30000) + '\n\n[Content truncated for analysis]'
+      : rawContent;
+
+  const chunks = chunkText(cappedContent, { maxTokens: 8000 });
 
   if (chunks.length === 1) {
     // Single chunk — direct analysis
     return callClaude<ContentAnalysis>({
       model: 'sonnet',
       systemPrompt: ANALYSIS_SYSTEM_PROMPT,
-      userPrompt: `Analyze the following ${sourceLabel} and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${rawContent}`,
+      userPrompt: `Analyze the following ${sourceLabel} and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${cappedContent}`,
       maxTokens: 8192,
       temperature: 0.5,
     });
   }
 
-  // Multi-chunk: analyze each, then consolidate
-  const partialAnalyses: ContentAnalysis[] = [];
-  for (const chunk of chunks) {
-    const result = await callClaude<ContentAnalysis>({
-      model: 'sonnet',
-      systemPrompt: ANALYSIS_SYSTEM_PROMPT,
-      userPrompt: `Analyze this chunk (part of a larger document) and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${chunk}`,
-      maxTokens: 8192,
-      temperature: 0.5,
-    });
-    partialAnalyses.push(result.data);
-  }
+  // Multi-chunk: analyze in parallel, then consolidate
+  const chunkResults = await Promise.all(
+    chunks.map((chunk) =>
+      callClaude<ContentAnalysis>({
+        model: 'sonnet',
+        systemPrompt: ANALYSIS_SYSTEM_PROMPT,
+        userPrompt: `Analyze this chunk (part of a larger document) and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${chunk}`,
+        maxTokens: 8192,
+        temperature: 0.5,
+      }),
+    ),
+  );
+  const partialAnalyses = chunkResults.map((r) => r.data);
 
   // Consolidate
   const consolidateResult = await callClaude<ContentAnalysis>({
