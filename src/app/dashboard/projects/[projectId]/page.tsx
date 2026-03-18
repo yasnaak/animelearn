@@ -417,19 +417,40 @@ export default function ProjectPage({
   };
 
   const [analyzePhase, setAnalyzePhase] = useState<'idle' | 'analyzing' | 'planning'>('idle');
-  const resetStatus = trpc.project.resetStatus.useMutation();
 
   const handleAnalyze = async () => {
     setAnalyzePhase('analyzing');
     try {
-      await analyzeContentMutation.mutateAsync({ projectId });
+      // Phase 1: Analyze content (lightweight API, not tRPC — avoids heavy bundle cold start)
+      const analyzeRes = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, phase: 'analyze' }),
+      });
+      if (!analyzeRes.ok) {
+        const err = await analyzeRes.json().catch(() => ({ error: 'Analysis failed' }));
+        throw new Error(err.error || 'Analysis failed');
+      }
+
+      // Phase 2: Plan episodes
       setAnalyzePhase('planning');
-      await planFromAnalysisMutation.mutateAsync({ projectId });
+      const planRes = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, phase: 'plan' }),
+      });
+      if (!planRes.ok) {
+        const err = await planRes.json().catch(() => ({ error: 'Planning failed' }));
+        throw new Error(err.error || 'Planning failed');
+      }
+
       setAnalyzePhase('idle');
-    } catch {
+      toast.success('Content analyzed! Episodes are ready to generate.');
+      utils.project.get.invalidate({ id: projectId });
+      utils.generation.listEpisodes.invalidate({ projectId });
+    } catch (error) {
       setAnalyzePhase('idle');
-      // Reset stuck status in DB (Vercel may have killed the function before error handler ran)
-      try { await resetStatus.mutateAsync({ projectId }); } catch {}
+      toast.error(error instanceof Error ? error.message : 'Analysis failed');
       utils.project.get.invalidate({ id: projectId });
     }
   };
