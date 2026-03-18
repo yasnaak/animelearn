@@ -34,7 +34,7 @@ const MODEL_MAP = {
 
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1500;
-const DEFAULT_TIMEOUT_MS = 180_000; // 180s per API call
+const DEFAULT_TIMEOUT_MS = 45_000; // 45s — must fit within Vercel Hobby 60s limit
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

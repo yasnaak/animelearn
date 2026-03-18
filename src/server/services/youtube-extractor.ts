@@ -33,38 +33,58 @@ function getGemini() {
 
 /**
  * Fallback: use Gemini to transcribe a YouTube video directly.
- * Works for any video (captions or not) — Gemini processes YouTube natively.
+ * 40s timeout to stay within Vercel Hobby 60s function limit.
  */
 async function transcribeWithGemini(
   videoId: string,
 ): Promise<YouTubeExtractResult> {
   const model = getGemini().getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-  const result = await model.generateContent([
-    {
-      fileData: {
-        fileUri: `https://www.youtube.com/watch?v=${videoId}`,
-        mimeType: 'video/*',
-      },
-    },
-    {
-      text: 'Transcribe ALL spoken content in this video verbatim. Output ONLY the raw transcript text — no timestamps, no speaker labels, no commentary, no formatting.',
-    },
-  ]);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 40_000);
 
-  const text = result.response.text();
+  try {
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              fileData: {
+                fileUri: `https://www.youtube.com/watch?v=${videoId}`,
+                mimeType: 'video/*',
+              },
+            },
+            {
+              text: 'Transcribe ALL spoken content in this video verbatim. Output ONLY the raw transcript text — no timestamps, no speaker labels, no commentary, no formatting.',
+            },
+          ],
+        },
+      ],
+    });
 
-  if (!text?.trim()) {
-    throw new Error(
-      'Transcription returned empty — the video may not have spoken content.',
-    );
+    clearTimeout(timer);
+
+    const text = result.response.text();
+
+    if (!text?.trim()) {
+      throw new Error(
+        'Transcription returned empty — the video may not have spoken content.',
+      );
+    }
+
+    // Estimate duration from word count (~150 words/minute speaking rate)
+    const wordCount = text.trim().split(/\s+/).length;
+    const estimatedDuration = Math.ceil((wordCount / 150) * 60);
+
+    return { text: text.trim(), videoId, durationSeconds: estimatedDuration };
+  } catch (error) {
+    clearTimeout(timer);
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('abort'))) {
+      throw new Error('YouTube transcription timed out (40s). Try a shorter video or one with captions.');
+    }
+    throw error;
   }
-
-  // Estimate duration from word count (~150 words/minute speaking rate)
-  const wordCount = text.trim().split(/\s+/).length;
-  const estimatedDuration = Math.ceil((wordCount / 150) * 60);
-
-  return { text: text.trim(), videoId, durationSeconds: estimatedDuration };
 }
 
 /**

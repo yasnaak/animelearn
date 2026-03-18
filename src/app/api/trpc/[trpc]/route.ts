@@ -2,8 +2,8 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/server/trpc/router';
 import { createTRPCContext } from '@/server/trpc/context';
 
-// Allow long-running pipeline mutations (analysis, generation, etc.)
-export const maxDuration = 300; // 5 minutes
+// Vercel Hobby plan hard limit is 60s — this is a ceiling, not a target
+export const maxDuration = 60;
 
 const handler = (req: Request) =>
   fetchRequestHandler({

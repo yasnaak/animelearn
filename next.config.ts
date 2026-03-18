@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     '@remotion/compositor-linux-x64-gnu',
     '@remotion/compositor-linux-arm64-gnu',
     '@remotion/compositor-win32-x64-msvc',
+    'jsdom',
   ],
 };
 
