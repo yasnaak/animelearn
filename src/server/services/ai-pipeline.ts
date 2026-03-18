@@ -350,21 +350,17 @@ const PLANNING_SYSTEM_PROMPT = `You are a professional anime showrunner. You cre
 
 PRINCIPLES:
 1. Each episode must be self-contained but leave viewers wanting more
-2. First episode: strong hook, introduce characters, set up the central conflict
-3. Middle episodes: escalate stakes, deepen characters, surprise the audience
-4. Final episode: everything comes together, satisfying resolution with room for more
-5. Target 3-5 minutes per episode (50-80 shots, ~200 words of dialogue)
-6. YouTube retention: strong first 10 seconds, pattern interrupts every 30-60 seconds
-7. End each episode with a hook — cliffhanger, question, or tease
+2. Target 3-5 minutes per episode
+3. End each episode with a hook — cliffhanger, question, or tease
 
-EPISODE ARCHETYPES:
-- "Hook": grabs the audience, introduces the world and conflict
-- "Escalation": stakes rise, new complications, deeper character development
-- "Twist": expectations subverted, shocking revelation changes everything
-- "Climax": the big confrontation, highest emotional stakes
-- "Resolution": satisfying conclusion, emotional payoff, sets up potential continuation
+CONSTRAINTS:
+- Maximum 3 episodes per series (to keep output concise)
+- Maximum 3-4 characters total
+- Keep visual_description to 1-2 sentences
+- Keep synopsis to 1-2 sentences
+- Keep story_beats to 3-5 items per episode
 
-OUTPUT: Respond EXCLUSIVELY with valid JSON, no additional text or code blocks.`;
+OUTPUT: Respond EXCLUSIVELY with valid JSON. Do NOT wrap in code blocks. Do NOT use \`\`\`json. Just raw JSON.`;
 
 const PLANNING_SCHEMA = `{
   "series": {
@@ -407,11 +403,21 @@ export async function planSeries(
   style: string,
   language: string,
 ) {
+  // Send compact analysis to reduce input tokens and speed up response
+  const compactAnalysis = {
+    metadata: analysis.metadata,
+    story_elements: analysis.story_elements.map(e => ({
+      id: e.id, name: e.name, type: e.type,
+      description: e.description, dramatic_potential: e.dramatic_potential,
+    })),
+    suggested_episode_count: analysis.suggested_episode_count,
+  };
+
   return callClaude<SeriesPlan>({
     model: 'sonnet',
     systemPrompt: PLANNING_SYSTEM_PROMPT,
-    userPrompt: `Based on this content analysis, plan an anime series.\n\nVisual style: ${style}\nLanguage for dialogue: ${language}\n\nFollow this JSON schema:\n${PLANNING_SCHEMA}\n\nContent Analysis:\n${JSON.stringify(analysis, null, 2)}`,
-    maxTokens: 8192,
+    userPrompt: `Based on this content analysis, plan an anime series.\n\nVisual style: ${style}\nLanguage for dialogue: ${language}\n\nFollow this JSON schema:\n${PLANNING_SCHEMA}\n\nContent Analysis:\n${JSON.stringify(compactAnalysis)}`,
+    maxTokens: 4096,
     temperature: 0.7,
   });
 }
