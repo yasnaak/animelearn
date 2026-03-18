@@ -417,6 +417,7 @@ export default function ProjectPage({
   };
 
   const [analyzePhase, setAnalyzePhase] = useState<'idle' | 'analyzing' | 'planning'>('idle');
+  const resetStatus = trpc.project.resetStatus.useMutation();
 
   const handleAnalyze = async () => {
     setAnalyzePhase('analyzing');
@@ -427,6 +428,8 @@ export default function ProjectPage({
       setAnalyzePhase('idle');
     } catch {
       setAnalyzePhase('idle');
+      // Reset stuck status in DB (Vercel may have killed the function before error handler ran)
+      try { await resetStatus.mutateAsync({ projectId }); } catch {}
       utils.project.get.invalidate({ id: projectId });
     }
   };

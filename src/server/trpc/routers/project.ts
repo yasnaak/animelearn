@@ -133,6 +133,16 @@ export const projectRouter = router({
       return { textLength: text.length, title };
     }),
 
+  resetStatus: protectedProcedure
+    .input(z.object({ projectId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(projects)
+        .set({ status: 'draft', updatedAt: new Date() })
+        .where(eq(projects.id, input.projectId));
+      return { success: true };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {

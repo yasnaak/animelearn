@@ -32,9 +32,9 @@ const MODEL_MAP = {
   opus: 'claude-opus-4-6',
 } as const;
 
-const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 1500;
-const DEFAULT_TIMEOUT_MS = 45_000; // 45s — must fit within Vercel Hobby 60s limit
+const MAX_RETRIES = 1;
+const RETRY_DELAY_MS = 1000;
+const DEFAULT_TIMEOUT_MS = 30_000; // 30s — leaves 30s margin for cold start + DB on Vercel Hobby
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -284,7 +284,7 @@ export async function analyzeContent(
       userPrompt: `Analyze the following story idea and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\nThe user has provided a brief idea or concept. Expand it into story elements, identify dramatic potential, and suggest visual set-pieces for an anime adaptation.\n\n---\n\n${rawContent}`,
       maxTokens: 2048,
       temperature: 0.7,
-      timeoutMs: 45_000,
+      timeoutMs: 30_000,
     });
   }
 
@@ -311,7 +311,7 @@ export async function analyzeContent(
     userPrompt: `Analyze the following ${sourceLabel} and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${cappedContent}`,
     maxTokens: 2048,
     temperature: 0.5,
-    timeoutMs: 45_000,
+    timeoutMs: 30_000,
   });
 }
 
@@ -392,7 +392,7 @@ export async function planSeries(
     userPrompt: `Based on this content analysis, plan an anime series.\n\nVisual style: ${style}\nLanguage for dialogue: ${language}\n\nFollow this JSON schema:\n${PLANNING_SCHEMA}\n\nContent Analysis:\n${JSON.stringify(compactAnalysis)}`,
     maxTokens: 4096,
     temperature: 0.7,
-    timeoutMs: 45_000,
+    timeoutMs: 30_000,
   });
 }
 
