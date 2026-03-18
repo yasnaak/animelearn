@@ -353,7 +353,7 @@ export default function NewProjectPage() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  We extract the transcript and turn it into an anime series. The video must have captions.
+                  We extract the transcript (or transcribe the audio with AI) and turn it into an anime series.
                 </p>
               </TabsContent>
 

@@ -1,6 +1,5 @@
 import { YoutubeTranscript } from 'youtube-transcript';
-import ytdl from '@distube/ytdl-core';
-import { transcribeAudio } from './fal';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export interface YouTubeExtractResult {
   text: string;
@@ -16,46 +15,62 @@ export function extractVideoId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
+// Lazy-init Gemini client for YouTube transcription fallback.
+let _genAI: GoogleGenerativeAI | null = null;
+
+function getGemini() {
+  if (!_genAI) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error(
+        'GEMINI_API_KEY is required to transcribe YouTube videos without captions.',
+      );
+    }
+    _genAI = new GoogleGenerativeAI(key);
+  }
+  return _genAI;
+}
+
 /**
- * Fallback: extract audio URL from YouTube and transcribe with Whisper via fal.ai.
- * Used when captions/transcripts are disabled on the video.
+ * Fallback: use Gemini to transcribe a YouTube video directly.
+ * Works for any video (captions or not) — Gemini processes YouTube natively.
  */
-async function transcribeYouTubeAudio(
+async function transcribeWithGemini(
   videoId: string,
 ): Promise<YouTubeExtractResult> {
-  const info = await ytdl.getInfo(videoId);
+  const model = getGemini().getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-  // Pick an audio-only format (smallest to minimize transfer time)
-  const audioFormat = ytdl.chooseFormat(info.formats, {
-    quality: 'lowestaudio',
-    filter: 'audioonly',
-  });
+  const result = await model.generateContent([
+    {
+      fileData: {
+        fileUri: `https://www.youtube.com/watch?v=${videoId}`,
+        mimeType: 'video/*',
+      },
+    },
+    {
+      text: 'Transcribe ALL spoken content in this video verbatim. Output ONLY the raw transcript text — no timestamps, no speaker labels, no commentary, no formatting.',
+    },
+  ]);
 
-  if (!audioFormat?.url) {
+  const text = result.response.text();
+
+  if (!text?.trim()) {
     throw new Error(
-      'Could not extract audio from this YouTube video. It may be restricted.',
+      'Transcription returned empty — the video may not have spoken content.',
     );
   }
 
-  const durationSeconds =
-    parseInt(info.videoDetails.lengthSeconds, 10) || 0;
+  // Estimate duration from word count (~150 words/minute speaking rate)
+  const wordCount = text.trim().split(/\s+/).length;
+  const estimatedDuration = Math.ceil((wordCount / 150) * 60);
 
-  // Send audio URL directly to fal.ai Whisper (no local download needed)
-  const result = await transcribeAudio(audioFormat.url);
-
-  if (!result.text?.trim()) {
-    throw new Error(
-      'Audio transcription returned empty — the video may not have spoken content.',
-    );
-  }
-
-  return { text: result.text.trim(), videoId, durationSeconds };
+  return { text: text.trim(), videoId, durationSeconds: estimatedDuration };
 }
 
 /**
  * Extract transcript from a YouTube video.
  * 1. Tries built-in captions first (free, instant)
- * 2. Falls back to audio extraction + Whisper transcription
+ * 2. Falls back to Gemini transcription (works for any video)
  */
 export async function extractYouTubeTranscript(
   url: string,
@@ -80,11 +95,11 @@ export async function extractYouTubeTranscript(
     }
   } catch (err) {
     console.warn(
-      `[youtube] Captions unavailable for ${videoId}, falling back to audio transcription:`,
+      `[youtube] Captions unavailable for ${videoId}, falling back to Gemini:`,
       err instanceof Error ? err.message : err,
     );
   }
 
-  // Strategy 2: Audio extraction + Whisper transcription
-  return transcribeYouTubeAudio(videoId);
+  // Strategy 2: Gemini transcription (handles any video)
+  return transcribeWithGemini(videoId);
 }
