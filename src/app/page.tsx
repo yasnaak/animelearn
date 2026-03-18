@@ -169,10 +169,10 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
-            <Link href="/auth/signin">Sign In</Link>
+            <Link href="/login">Sign In</Link>
           </Button>
           <Button asChild size="sm" className="bg-white text-black font-medium hover:bg-zinc-200 shadow-lg shadow-white/10">
-            <Link href="/auth/signin">Start Free</Link>
+            <Link href="/login">Start Free</Link>
           </Button>
         </div>
       </nav>
@@ -198,7 +198,7 @@ export default function LandingPage() {
 
         <div className="al-reveal mt-10 flex flex-col gap-4 sm:flex-row">
           <Button asChild size="lg" className="group bg-white px-8 text-base font-semibold text-black shadow-xl shadow-white/10 hover:bg-zinc-100">
-            <Link href="/auth/signin">
+            <Link href="/login">
               Create Your First Episode
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
@@ -750,7 +750,7 @@ export default function LandingPage() {
             </ul>
 
             <Button asChild size="lg" variant="outline" className="mt-8 w-full border-zinc-700 text-zinc-300 hover:bg-white/5">
-              <Link href="/auth/signin">Get Started</Link>
+              <Link href="/login">Get Started</Link>
             </Button>
           </div>
 
@@ -785,7 +785,7 @@ export default function LandingPage() {
             </ul>
 
             <Button asChild size="lg" className="mt-8 w-full bg-white font-semibold text-black shadow-lg shadow-white/10 hover:bg-zinc-100">
-              <Link href="/auth/signin">Start Creating</Link>
+              <Link href="/login">Start Creating</Link>
             </Button>
           </div>
         </div>
@@ -807,7 +807,7 @@ export default function LandingPage() {
           </p>
           <div className="relative mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button asChild size="lg" className="group bg-white px-10 text-base font-semibold text-black shadow-xl shadow-white/10 hover:bg-zinc-100">
-              <Link href="/auth/signin">
+              <Link href="/login">
                 Start Creating Now
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
