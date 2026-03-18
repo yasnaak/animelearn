@@ -376,14 +376,20 @@ export default function ProjectPage({
   );
 
   const deleteProject = trpc.project.delete.useMutation();
-  const analyzeMutation = trpc.generation.analyze.useMutation({
+  const analyzeContentMutation = trpc.generation.analyzeContent.useMutation({
+    onError: (error) => {
+      toast.error(`Analysis failed: ${error.message}`);
+      utils.project.get.invalidate({ id: projectId });
+    },
+  });
+  const planFromAnalysisMutation = trpc.generation.planFromAnalysis.useMutation({
     onSuccess: () => {
       toast.success('Content analyzed! Episodes are ready to generate.');
       utils.project.get.invalidate({ id: projectId });
       utils.generation.listEpisodes.invalidate({ projectId });
     },
     onError: (error) => {
-      toast.error(`Analysis failed: ${error.message}`);
+      toast.error(`Planning failed: ${error.message}`);
       utils.project.get.invalidate({ id: projectId });
     },
   });
@@ -410,8 +416,19 @@ export default function ProjectPage({
     }
   };
 
-  const handleAnalyze = () => {
-    analyzeMutation.mutate({ projectId });
+  const [analyzePhase, setAnalyzePhase] = useState<'idle' | 'analyzing' | 'planning'>('idle');
+
+  const handleAnalyze = async () => {
+    setAnalyzePhase('analyzing');
+    try {
+      await analyzeContentMutation.mutateAsync({ projectId });
+      setAnalyzePhase('planning');
+      await planFromAnalysisMutation.mutateAsync({ projectId });
+      setAnalyzePhase('idle');
+    } catch {
+      setAnalyzePhase('idle');
+      utils.project.get.invalidate({ id: projectId });
+    }
   };
 
   const handleGenerateEpisode = (episodeNumber: number) => {
@@ -461,7 +478,7 @@ export default function ProjectPage({
     : 0;
 
   const planData = project.seriesPlan as Record<string, unknown> | null;
-  const isAnalyzing = analyzeMutation.isPending || project.status === 'analyzing';
+  const isAnalyzing = analyzePhase !== 'idle' || project.status === 'analyzing' || project.status === 'analyzed' || project.status === 'planning';
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -549,7 +566,14 @@ export default function ProjectPage({
               {isAnalyzing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing your content...
+                  {analyzePhase === 'planning' || project.status === 'planning' || project.status === 'analyzed'
+                    ? 'Planning episodes...'
+                    : 'Analyzing your content...'}
+                </>
+              ) : project.status === 'failed' ? (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Retry Analysis
                 </>
               ) : (
                 <>

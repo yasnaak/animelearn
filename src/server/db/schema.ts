@@ -15,6 +15,8 @@ import {
 export const projectStatusEnum = pgEnum('project_status', [
   'draft',
   'analyzing',
+  'analyzed',
+  'planning',
   'planned',
   'generating',
   'completed',
