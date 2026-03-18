@@ -1,5 +1,4 @@
 import { callClaude } from './claude';
-import { chunkText } from './text-chunker';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -283,8 +282,9 @@ export async function analyzeContent(
       model: 'sonnet',
       systemPrompt: ANALYSIS_SYSTEM_PROMPT,
       userPrompt: `Analyze the following story idea and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\nThe user has provided a brief idea or concept. Expand it into story elements, identify dramatic potential, and suggest visual set-pieces for an anime adaptation.\n\n---\n\n${rawContent}`,
-      maxTokens: 8192,
+      maxTokens: 2048,
       temperature: 0.7,
+      timeoutMs: 45_000,
     });
   }
 
@@ -297,49 +297,22 @@ export async function analyzeContent(
           ? 'web page content'
           : 'text content';
 
-  // Cap content at ~30K chars to avoid excessive chunking and Vercel timeouts
+  // Cap content at ~12K chars to keep within Vercel Hobby 60s timeout
+  // A YouTube transcript of 10min is typically ~8-12K chars
   const cappedContent =
-    rawContent.length > 30000
-      ? rawContent.slice(0, 30000) + '\n\n[Content truncated for analysis]'
+    rawContent.length > 12000
+      ? rawContent.slice(0, 12000) + '\n\n[Content truncated for analysis]'
       : rawContent;
 
-  const chunks = chunkText(cappedContent, { maxTokens: 8000 });
-
-  if (chunks.length === 1) {
-    // Single chunk — direct analysis
-    return callClaude<ContentAnalysis>({
-      model: 'sonnet',
-      systemPrompt: ANALYSIS_SYSTEM_PROMPT,
-      userPrompt: `Analyze the following ${sourceLabel} and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${cappedContent}`,
-      maxTokens: 8192,
-      temperature: 0.5,
-    });
-  }
-
-  // Multi-chunk: analyze in parallel, then consolidate
-  const chunkResults = await Promise.all(
-    chunks.map((chunk) =>
-      callClaude<ContentAnalysis>({
-        model: 'sonnet',
-        systemPrompt: ANALYSIS_SYSTEM_PROMPT,
-        userPrompt: `Analyze this chunk (part of a larger document) and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${chunk}`,
-        maxTokens: 8192,
-        temperature: 0.5,
-      }),
-    ),
-  );
-  const partialAnalyses = chunkResults.map((r) => r.data);
-
-  // Consolidate
-  const consolidateResult = await callClaude<ContentAnalysis>({
+  // Single-pass analysis (no chunking) — must finish within Vercel's 60s
+  return callClaude<ContentAnalysis>({
     model: 'sonnet',
     systemPrompt: ANALYSIS_SYSTEM_PROMPT,
-    userPrompt: `You analyzed a document in ${chunks.length} parts. Here are the partial analyses. Consolidate them into a single coherent analysis, removing duplicates, fixing element IDs to be sequential, and updating relationships.\n\nSchema:\n${ANALYSIS_SCHEMA}\n\nPartial analyses:\n${JSON.stringify(partialAnalyses, null, 2)}`,
-    maxTokens: 8192,
-    temperature: 0.3,
+    userPrompt: `Analyze the following ${sourceLabel} and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${cappedContent}`,
+    maxTokens: 2048,
+    temperature: 0.5,
+    timeoutMs: 45_000,
   });
-
-  return consolidateResult;
 }
 
 // ============================================================
@@ -419,6 +392,7 @@ export async function planSeries(
     userPrompt: `Based on this content analysis, plan an anime series.\n\nVisual style: ${style}\nLanguage for dialogue: ${language}\n\nFollow this JSON schema:\n${PLANNING_SCHEMA}\n\nContent Analysis:\n${JSON.stringify(compactAnalysis)}`,
     maxTokens: 4096,
     temperature: 0.7,
+    timeoutMs: 45_000,
   });
 }
 
