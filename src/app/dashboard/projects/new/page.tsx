@@ -60,6 +60,7 @@ export default function NewProjectPage() {
 
   const createProject = trpc.project.create.useMutation();
   const extractYoutube = trpc.project.extractYoutube.useMutation();
+  const extractUrl = trpc.project.extractUrl.useMutation();
 
   const handleFileDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -183,6 +184,16 @@ export default function NewProjectPage() {
         toast.success(
           `YouTube transcript extracted: ${minutes} min video, ${Math.round(result.textLength / 1000)}K characters`,
         );
+      } else if (sourceType === 'url' && webUrl.trim()) {
+        setUploadState('extracting');
+        const result = await extractUrl.mutateAsync({
+          projectId: project.id,
+          url: webUrl.trim(),
+        });
+        setUploadState('done');
+        toast.success(
+          `Content extracted: ${Math.round(result.textLength / 1000)}K characters from "${result.title}"`,
+        );
       }
 
       router.push(`/dashboard/projects/${project.id}`);
@@ -194,7 +205,7 @@ export default function NewProjectPage() {
     }
   };
 
-  const isSubmitting = createProject.isPending || extractYoutube.isPending || uploadState === 'uploading' || uploadState === 'extracting';
+  const isSubmitting = createProject.isPending || extractYoutube.isPending || extractUrl.isPending || uploadState === 'uploading' || uploadState === 'extracting';
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

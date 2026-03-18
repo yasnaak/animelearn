@@ -3,6 +3,7 @@ import { projects } from '@/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { extractYouTubeTranscript } from '@/server/services/youtube-extractor';
+import { extractWebContent } from '@/server/services/web-extractor';
 
 export const projectRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -95,6 +96,41 @@ export const projectRouter = router({
         .where(eq(projects.id, input.projectId));
 
       return { textLength: text.length, durationSeconds, videoId };
+    }),
+
+  extractUrl: protectedProcedure
+    .input(z.object({ projectId: z.string().uuid(), url: z.string().url() }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, input.projectId))
+        .limit(1);
+
+      const project = result[0];
+      if (!project || project.userId !== ctx.user.id) {
+        throw new Error('Project not found');
+      }
+
+      const { text, title, siteName } = await extractWebContent(input.url);
+
+      if (text.length < 100) {
+        throw new Error(
+          'Page content too short — could not extract enough text from this URL.',
+        );
+      }
+
+      const desc = siteName ? `${siteName}: ${title}` : title;
+      await ctx.db
+        .update(projects)
+        .set({
+          rawContent: text,
+          description: desc,
+          updatedAt: new Date(),
+        })
+        .where(eq(projects.id, input.projectId));
+
+      return { textLength: text.length, title };
     }),
 
   delete: protectedProcedure
