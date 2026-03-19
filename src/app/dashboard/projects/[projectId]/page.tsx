@@ -502,7 +502,7 @@ export default function ProjectPage({
     : 0;
 
   const planData = project.seriesPlan as Record<string, unknown> | null;
-  const isAnalyzing = analyzePhase !== 'idle' || project.status === 'analyzing' || project.status === 'analyzed' || project.status === 'planning';
+  const isAnalyzing = analyzePhase !== 'idle';
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

@@ -279,7 +279,7 @@ export async function analyzeContent(
   // For 'idea' sourceType, use a different prompt that generates story elements from a brief idea
   if (sourceType === 'idea') {
     return callClaude<ContentAnalysis>({
-      model: 'sonnet',
+      model: 'haiku',
       systemPrompt: ANALYSIS_SYSTEM_PROMPT,
       userPrompt: `Analyze the following story idea and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\nThe user has provided a brief idea or concept. Expand it into story elements, identify dramatic potential, and suggest visual set-pieces for an anime adaptation.\n\n---\n\n${rawContent}`,
       maxTokens: 2048,
@@ -306,7 +306,7 @@ export async function analyzeContent(
 
   // Single-pass analysis (no chunking) — must finish within Vercel's 60s
   return callClaude<ContentAnalysis>({
-    model: 'sonnet',
+    model: 'haiku',
     systemPrompt: ANALYSIS_SYSTEM_PROMPT,
     userPrompt: `Analyze the following ${sourceLabel} and produce a JSON analysis following this schema:\n\n${ANALYSIS_SCHEMA}\n\nContent language: ${language}\n\n---\n\n${cappedContent}`,
     maxTokens: 2048,

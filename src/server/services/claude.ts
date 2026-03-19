@@ -12,7 +12,7 @@ function getClient(): Anthropic {
 }
 
 interface ClaudeOptions {
-  model?: 'sonnet' | 'opus';
+  model?: 'haiku' | 'sonnet' | 'opus';
   maxTokens?: number;
   temperature?: number;
   systemPrompt: string;
@@ -28,6 +28,7 @@ interface ClaudeResult<T> {
 }
 
 const MODEL_MAP = {
+  haiku: 'claude-haiku-4-5-20251001',
   sonnet: 'claude-sonnet-4-6',
   opus: 'claude-opus-4-6',
 } as const;
